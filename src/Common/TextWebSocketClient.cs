@@ -23,7 +23,7 @@ namespace Twitch
             _uri = uri ?? throw new ArgumentNullException(nameof(uri));
             _encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
             _decoder = _encoding.GetDecoder();
-            _sbuf = new byte[8];
+            _sbuf = new byte[4096];
             _rbuf = new byte[4096];
             _rcbuf = new char[_encoding.GetMaxCharCount(_rbuf.Length)];
             _rcp = 0;
