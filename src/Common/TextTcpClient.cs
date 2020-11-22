@@ -78,7 +78,7 @@ namespace Twitch
             if (message is null)
                 throw new ArgumentNullException(nameof(message));
             if (_sw is null)
-                throw new InvalidOperationException("Cannot send while disconnected");
+                throw new InvalidOperationException("Cannot send while disconnected.");
 
             await _sw.WriteLineAsync(message).ConfigureAwait(false);
             await _sw.FlushAsync().ConfigureAwait(false);

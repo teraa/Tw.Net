@@ -53,11 +53,6 @@ namespace Twitch
 
         public async Task<string?> ReadAsync(CancellationToken cancellationToken = default)
         {
-            if (_client is null)
-                throw new InvalidOperationException("Cannot read while disconnected.");
-            if (_client.State != WebSocketState.Open)
-                throw new InvalidOperationException($"Cannot read while socket is not open. Current state: {_client.State}");
-
             int read;
 
             if (_rcp == _rcl)
@@ -127,6 +122,11 @@ namespace Twitch
 
         private async Task<int> ReadBufferAsync(CancellationToken cancellationToken)
         {
+            if (_client is null)
+                throw new InvalidOperationException("Cannot read while disconnected.");
+            if (_client.State != WebSocketState.Open)
+                throw new InvalidOperationException($"Cannot read while socket is not open. Current state: {_client.State}.");
+
             _rcl = 0;
             _rcp = 0;
 
@@ -161,7 +161,7 @@ namespace Twitch
             }
             else
             {
-                var arr = message.ToCharArray(); 
+                var arr = message.ToCharArray();
                 int p = 0;
                 do
                 {
