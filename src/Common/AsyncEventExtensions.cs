@@ -10,11 +10,20 @@ namespace Twitch
         public static Task InvokeAsync(this Func<Task> eventHandler)
             => InvokePrivateAsync(eventHandler, null);
 
-        public static Task InvokeAsync<T>(this Func<T, Task> eventHandler, T arg) where T : class
+        public static Task InvokeAsync<T>(this Func<T, Task> eventHandler, T? arg)
+            where T : class
             => InvokePrivateAsync(eventHandler, new[] { arg });
+
+        public static Task InvokeAsync<T1, T2>(this Func<T1, T2, Task> eventHandler, T1? arg1, T2? arg2)
+            where T1 : class
+            where T2 : class
+            => InvokePrivateAsync(eventHandler, new object?[] { arg1, arg2 });
 
         private static async Task InvokePrivateAsync(MulticastDelegate d, object?[]? parameters)
         {
+            if (d is null)
+                throw new ArgumentNullException(nameof(d));
+
             var list = d.GetInvocationList();
             for (int i = 0; i < list.Length; i++)
             {
