@@ -1,4 +1,6 @@
 using System;
+using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 namespace Twitch
 {
@@ -15,9 +17,9 @@ namespace Twitch
                     var task = (Task)sub.Method.Invoke(sub.Target, null)!;
                     await task.ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex.InnerException is not null)
+                catch (TargetInvocationException ex)
                 {
-                    throw ex.InnerException;
+                    ExceptionDispatchInfo.Capture(ex.InnerException!).Throw();
                 }
             }
         }
@@ -34,9 +36,9 @@ namespace Twitch
                     var task = (Task)sub.Method.Invoke(sub.Target, new[] { arg })!;
                     await task.ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex.InnerException is not null)
+                catch (TargetInvocationException ex)
                 {
-                    throw ex.InnerException;
+                    ExceptionDispatchInfo.Capture(ex.InnerException!).Throw();
                 }
             }
         }
