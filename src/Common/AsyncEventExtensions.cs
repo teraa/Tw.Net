@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    public static class AsyncEventExtensions
+    internal static class AsyncEventExtensions
     {
         public static Task InvokeAsync(this Func<Task> eventHandler)
             => InvokePrivateAsync(eventHandler, null);
