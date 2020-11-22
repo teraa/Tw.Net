@@ -151,6 +151,8 @@ namespace Twitch
                 throw new ArgumentNullException(nameof(message));
             if (_client is null)
                 throw new InvalidOperationException("Cannot send while disconnected.");
+            if (_client.State != WebSocketState.Open)
+                throw new InvalidOperationException($"Cannot send while socket is not open. Current state: {_client.State}.");
 
             int count = _encoding.GetByteCount(message);
             if (count <= _sbuf.Length)
