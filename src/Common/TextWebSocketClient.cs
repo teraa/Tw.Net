@@ -39,14 +39,13 @@ namespace Twitch
         {
             try
             {
-                var client = _client;
-                _client = null;
-
-                if (client is not null)
+                if (_client is ClientWebSocket client)
                 {
                     await client.CloseAsync(WebSocketCloseStatus.NormalClosure, default, default);
                     client.Dispose();
                 }
+
+                _client = null;
             }
             catch { }
         }
