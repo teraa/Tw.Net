@@ -269,6 +269,9 @@ namespace Twitch.Irc
 
         private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {
+#if DEBUG
+            ((Timer)sender).Enabled = false;
+#endif
             try
             {
                 var text = DateTimeOffset.UtcNow.ToString("u");
@@ -294,6 +297,9 @@ namespace Twitch.Irc
             {
                 _logger?.LogError(ex, "Exception in PING timer");
             }
+#if DEBUG
+            ((Timer)sender).Enabled = true;
+#endif
         }
     }
 }
