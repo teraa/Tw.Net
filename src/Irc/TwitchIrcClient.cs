@@ -38,7 +38,9 @@ namespace Twitch.Irc
         #region events
         public event Func<Task>? Connected;
         public event Func<Task>? Disconnected;
+        public event Func<string, Task>? RawMessageSent;
         public event Func<string, Task>? RawMessageReceived;
+        public event Func<IrcMessage, Task>? IrcMessageSent;
         public event Func<IrcMessage, Task>? IrcMessageReceived;
         #endregion events
 
@@ -117,15 +119,17 @@ namespace Twitch.Irc
 
         }
 
-        public Task SendRawAsync(string message)
+        public async Task SendRawAsync(string message)
         {
-            return _client.SendAsync(message);
+            await _client.SendAsync(message).ConfigureAwait(false);
+            await _eventInvoker.InvokeAsync(RawMessageSent, nameof(RawMessageSent), message).ConfigureAwait(false);
         }
 
-        public Task SendAsync(IrcMessage message)
+        public async Task SendAsync(IrcMessage message)
         {
             var raw = message.ToString();
-            return SendRawAsync(raw);
+            await SendRawAsync(raw).ConfigureAwait(false);
+            await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
         }
 
         private async Task ListenAsync(CancellationToken cancellationToken)
