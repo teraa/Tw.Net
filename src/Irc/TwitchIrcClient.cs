@@ -82,10 +82,18 @@ namespace Twitch.Irc
             await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
             _listenerTask = ListenAsync(cancellationToken);
 
-            await SendRawAsync("CAP REQ :twitch.tv/tags twitch.tv/commands").ConfigureAwait(false);
-
+            var caps = "twitch.tv/tags twitch.tv/commands";
             if (RequestMembershipCapability)
-                await SendRawAsync("CAP REQ :twitch.tv/membership").ConfigureAwait(false);
+                caps += " twitch.tv/membership";
+
+            var capReq = new IrcMessage
+            {
+                Command = IrcCommand.CAP,
+                Arg = "REQ",
+                Content = (caps, null)
+            };
+
+            await SendAsync(capReq).ConfigureAwait(false);
 
             await LoginAsync(cancellationToken).ConfigureAwait(false);
 
@@ -178,8 +186,19 @@ namespace Twitch.Irc
 
         private async Task LoginAsync(CancellationToken cancellationToken)
         {
-            await SendRawAsync($"PASS oauth:{_token}").ConfigureAwait(false);
-            await SendRawAsync($"NICK {_login}").ConfigureAwait(false);
+            var passReq = new IrcMessage
+            {
+                Command = IrcCommand.PASS,
+                Content = ("oauth:" + _token, null)
+            };
+            await SendAsync(passReq).ConfigureAwait(false);
+
+            var nickReq = new IrcMessage
+            {
+                Command = IrcCommand.NICK,
+                Content = (_login, null),
+            };
+            await SendAsync(nickReq).ConfigureAwait(false);
 
             if (!IsAnonLogin)
             {
