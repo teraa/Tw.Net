@@ -196,7 +196,7 @@ namespace Twitch.Irc
             var nickReq = new IrcMessage
             {
                 Command = IrcCommand.NICK,
-                Content = (_login, null),
+                Content = (_login!, null),
             };
             await SendAsync(nickReq).ConfigureAwait(false);
 
@@ -271,16 +271,17 @@ namespace Twitch.Irc
         {
             try
             {
+                var text = DateTimeOffset.UtcNow.ToString("u");
                 var request = new IrcMessage
                 {
                     Command = IrcCommand.PING,
-                    Content = (Text: DateTimeOffset.UtcNow.ToString("u"), Ctcp: null)
+                    Content = (Text: text, Ctcp: null)
                 };
 
                 await SendAsync(request).ConfigureAwait(false);
 
                 // TODO: token
-                var response = await GetNextMessageAsync(x => x.Command == IrcCommand.PONG && x.Content == request.Content,
+                var response = await GetNextMessageAsync(x => x.Command == IrcCommand.PONG && x.Content?.Text == text,
                     _loginTimeout, default).ConfigureAwait(false);
 
                 if (response is null)
