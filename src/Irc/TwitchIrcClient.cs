@@ -30,6 +30,7 @@ namespace Twitch.Irc
             _logger = logger;
 
             _eventInvoker = new AsyncEventInvoker(_eventWarningTimeout, _logger);
+
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
@@ -189,14 +190,14 @@ namespace Twitch.Irc
             var passReq = new IrcMessage
             {
                 Command = IrcCommand.PASS,
-                Content = ("oauth:" + _token, null)
+                Content = (Text: "oauth:" + _token, Ctcp: null)
             };
             await SendAsync(passReq).ConfigureAwait(false);
 
             var nickReq = new IrcMessage
             {
                 Command = IrcCommand.NICK,
-                Content = (_login!, null),
+                Content = (Text: _login!, Ctcp: null),
             };
             await SendAsync(nickReq).ConfigureAwait(false);
 
@@ -217,7 +218,7 @@ namespace Twitch.Irc
                 }
                 else
                 {
-                    // TODO: set globaluserstate data
+                    // TODO: Set GLOBALUSERSTATE data
                 }
             }
         }
