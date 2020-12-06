@@ -138,12 +138,12 @@ namespace Twitch.Irc
                         input = input[1..];
                         if (input[^1] == CtcpDelimiter)
                             input = input[..^1];
-                        
+
                         i = input.IndexOf(' ');
 
                         if (i == -1)
                             throw new FormatException();
-                        
+
                         ctcp = input[..i].ToString();
                         input = input[(i + 1)..];
                     }

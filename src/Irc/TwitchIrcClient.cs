@@ -88,7 +88,6 @@ namespace Twitch.Irc
                 _token = token ?? throw new ArgumentNullException(nameof(token));
 
                 _stoppingTokenSource = new CancellationTokenSource();
-
                 _disconnectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_stoppingTokenSource.Token);
 
                 await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
