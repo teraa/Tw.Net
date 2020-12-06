@@ -174,7 +174,7 @@ namespace Twitch.Irc
             return winnerTask == sourceTask
                 ? await sourceTask.ConfigureAwait(false)
                 : null;
-            
+
             Task Handler(IrcMessage ircMessage)
             {
                 if (predicate(ircMessage))
@@ -233,7 +233,7 @@ namespace Twitch.Irc
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error parsing IRC message: {rawMessage}");
+                _logger?.LogError(ex, $"Exception thrown while parsing IRC message: {rawMessage}");
             }
         }
 
@@ -263,7 +263,7 @@ namespace Twitch.Irc
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Error handling message: {ircMessage}");
+                _logger?.LogError(ex, $"Exception thrown while handling message: {ircMessage}");
             }
         }
 
@@ -292,7 +292,7 @@ namespace Twitch.Irc
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Error in PING timer");
+                _logger?.LogError(ex, "Exception in PING timer");
             }
         }
     }
