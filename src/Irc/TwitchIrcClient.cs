@@ -86,26 +86,9 @@ namespace Twitch.Irc
             {
                 _login = login ?? throw new ArgumentNullException(nameof(login));
                 _token = token ?? throw new ArgumentNullException(nameof(token));
+                await ConnectInternalAsync(cancellationToken).ConfigureAwait(false);
 
-                _stoppingTokenSource = new CancellationTokenSource();
-                _disconnectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_stoppingTokenSource.Token);
-
-                await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
-                _listenerTask = ListenAsync();
-
-                var caps = "twitch.tv/tags twitch.tv/commands";
-                if (RequestMembershipCapability)
-                    caps += " twitch.tv/membership";
-
-                var capReq = new IrcMessage
-                {
-                    Command = IrcCommand.CAP,
-                    Arg = "REQ",
-                    Content = (Text: caps, Ctcp: null)
-                };
-
-                await SendAsync(capReq).ConfigureAwait(false);
-
+                await RequestCapabilitiesAsync().ConfigureAwait(false);
                 await LoginAsync(cancellationToken).ConfigureAwait(false);
 
                 _pingTimer.Interval = _pingInterval.TotalMilliseconds;
@@ -118,6 +101,7 @@ namespace Twitch.Irc
                 _connectSem.Release();
             }
         }
+
         public Task ConnectAsync(CancellationToken cancellationToken = default)
         {
             return ConnectAsync(AnonLogin, "", cancellationToken);
@@ -147,7 +131,16 @@ namespace Twitch.Irc
             }
         }
 
-        private async Task HandleDisconnectAsync()
+        private async Task ConnectInternalAsync(CancellationToken cancellationToken)
+        {
+            _stoppingTokenSource = new CancellationTokenSource();
+            _disconnectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_stoppingTokenSource.Token);
+
+            await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
+            _listenerTask = ListenAsync();
+        }
+
+        private async Task BaseHandleDisconnectAsync()
         {
             _pingTimer.Enabled = false;
             _client.Disconnect();
@@ -226,6 +219,22 @@ namespace Twitch.Irc
 
                 return Task.CompletedTask;
             }
+        }
+
+        private async Task RequestCapabilitiesAsync()
+        {
+            var caps = "twitch.tv/tags twitch.tv/commands";
+            if (RequestMembershipCapability)
+                caps += " twitch.tv/membership";
+
+            var capReq = new IrcMessage
+            {
+                Command = IrcCommand.CAP,
+                Arg = "REQ",
+                Content = (Text: caps, Ctcp: null)
+            };
+
+            await SendAsync(capReq).ConfigureAwait(false);
         }
 
         private async Task LoginAsync(CancellationToken cancellationToken)
