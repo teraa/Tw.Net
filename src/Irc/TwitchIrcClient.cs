@@ -147,7 +147,7 @@ namespace Twitch.Irc
             }
         }
 
-        private async Task DisconnectInternalAsync()
+        private async Task HandleDisconnectAsync()
         {
             _pingTimer.Enabled = false;
             _client.Disconnect();
@@ -203,7 +203,7 @@ namespace Twitch.Irc
 
             _disconnectTokenSource?.Cancel();
 
-            await DisconnectInternalAsync().ConfigureAwait(false);
+            await HandleDisconnectAsync().ConfigureAwait(false);
         }
 
         private async Task<IrcMessage?> GetNextMessageAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
