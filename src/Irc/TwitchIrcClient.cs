@@ -7,7 +7,7 @@ using Timer = System.Timers.Timer;
 
 namespace Twitch.Irc
 {
-    public class TwitchIrcClient
+    public class TwitchIrcClient : PersistentSocketClient
     {
         internal const string AnonLoginPrefix = "justinfan";
         internal const string AnonLogin = AnonLoginPrefix + "1";
@@ -15,25 +15,15 @@ namespace Twitch.Irc
         private readonly TimeSpan _loginTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
-        private readonly TimeSpan _eventWarningTimeout = TimeSpan.FromSeconds(2);
-        private readonly ISocketClient _client;
-        private readonly ILogger<TwitchIrcClient>? _logger;
         private readonly SemaphoreSlim _connectSem;
-        private readonly AsyncEventInvoker _eventInvoker;
         private readonly Timer _pingTimer;
         private string? _login;
         private string? _token;
-        private Task? _listenerTask;
-        private CancellationTokenSource? _stoppingTokenSource;
-        private CancellationTokenSource? _disconnectTokenSource;
 
-        public TwitchIrcClient(ISocketClient client, ILogger<TwitchIrcClient>? logger = null)
+        public TwitchIrcClient(ISocketClient client, ILogger? logger = null)
+            : base(client, logger)
         {
-            _client = client ?? throw new ArgumentNullException(nameof(client));
-            _logger = logger;
-
             _connectSem = new SemaphoreSlim(1, 1);
-            _eventInvoker = new AsyncEventInvoker(_eventWarningTimeout, _logger);
 
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
@@ -41,10 +31,6 @@ namespace Twitch.Irc
         }
 
         #region events
-        public event Func<Task>? Connected;
-        public event Func<Task>? Disconnected;
-        public event Func<string, Task>? RawMessageSent;
-        public event Func<string, Task>? RawMessageReceived;
         public event Func<Task>? Ready;
         public event Func<IrcMessage, Task>? IrcMessageSent;
         public event Func<IrcMessage, Task>? IrcMessageReceived;
@@ -80,6 +66,10 @@ namespace Twitch.Irc
             => _login?.StartsWith(AnonLoginPrefix, StringComparison.OrdinalIgnoreCase) == true;
         #endregion properties
 
+        public new Task ConnectAsync(CancellationToken cancellationToken = default)
+        {
+            return ConnectAsync(AnonLogin, "", cancellationToken);
+        }
         public async Task ConnectAsync(string login, string token, CancellationToken cancellationToken = default)
         {
             await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -87,7 +77,7 @@ namespace Twitch.Irc
             {
                 _login = login ?? throw new ArgumentNullException(nameof(login));
                 _token = token ?? throw new ArgumentNullException(nameof(token));
-                await ConnectInternalAsync(cancellationToken).ConfigureAwait(false);
+                await base.ConnectAsync(cancellationToken).ConfigureAwait(false);
 
                 await RequestCapabilitiesAsync().ConfigureAwait(false);
                 await LoginAsync(cancellationToken).ConfigureAwait(false);
@@ -103,28 +93,12 @@ namespace Twitch.Irc
             }
         }
 
-        public Task ConnectAsync(CancellationToken cancellationToken = default)
-        {
-            return ConnectAsync(AnonLogin, "", cancellationToken);
-        }
-
-        public async Task DisconnectAsync()
+        public new async Task DisconnectAsync()
         {
             await _connectSem.WaitAsync().ConfigureAwait(false);
             try
             {
-                _stoppingTokenSource?.Cancel();
-
-                if (_listenerTask is Task task)
-                {
-                    try
-                    {
-                        await task.ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException) { }
-                }
-
-                _listenerTask = null;
+                await base.DisconnectAsync().ConfigureAwait(false);
             }
             finally
             {
@@ -132,84 +106,23 @@ namespace Twitch.Irc
             }
         }
 
-        private async Task ConnectInternalAsync(CancellationToken cancellationToken)
-        {
-            _stoppingTokenSource = new CancellationTokenSource();
-            _disconnectTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_stoppingTokenSource.Token);
-
-            await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
-            _listenerTask = ListenAsync();
-
-            await _eventInvoker.InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
-        }
-
-        private Task HandleDisconnectAsync()
+        protected override Task HandleDisconnectAsync()
         {
             _pingTimer.Enabled = false;
-            return BaseHandleDisconnectAsync();
+            return base.HandleDisconnectAsync();
         }
 
-        private async Task BaseHandleDisconnectAsync()
+        protected override Task ReconnectAsync()
         {
-            _client.Disconnect();
-
-            await _eventInvoker.InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
-
-            if (_stoppingTokenSource?.IsCancellationRequested == false)
-            {
-                try
-                {
-                    // TODO: Delay
-                    await ReconnectAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _logger?.LogError(ex, "Exception thrown while trying to reconnect");
-                }
-            }
+            return ConnectAsync(_login!, _token!);
         }
 
-        private Task ReconnectAsync()
-        {
-            return ConnectAsync(_login!, _token!, default);
-        }
-
-        public async Task SendRawAsync(string message)
-        {
-            await _client.SendAsync(message).ConfigureAwait(false);
-            await _eventInvoker.InvokeAsync(RawMessageSent, nameof(RawMessageSent), message).ConfigureAwait(false);
-        }
 
         public async Task SendAsync(IrcMessage message)
         {
             var raw = message.ToString();
             await SendRawAsync(raw).ConfigureAwait(false);
             await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
-        }
-
-        private async Task ListenAsync()
-        {
-            try
-            {
-                while (_disconnectTokenSource?.IsCancellationRequested == false)
-                {
-                    var message = await _client.ReadAsync(_disconnectTokenSource.Token).ConfigureAwait(false);
-                    if (message is not null)
-                    {
-                        await HandleRawMessageAsync(message).ConfigureAwait(false);
-                    }
-                    // TODO: else disconnect?
-                }
-            }
-            catch (OperationCanceledException) { }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "Exception in listener task");
-            }
-
-            _disconnectTokenSource?.Cancel();
-
-            await HandleDisconnectAsync().ConfigureAwait(false);
         }
 
         private async Task<IrcMessage?> GetNextMessageAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
@@ -288,9 +201,9 @@ namespace Twitch.Irc
             }
         }
 
-        private async Task HandleRawMessageAsync(string rawMessage)
+        protected override async Task HandleRawMessageAsync(string rawMessage)
         {
-            await _eventInvoker.InvokeAsync(RawMessageReceived, nameof(RawMessageReceived), rawMessage).ConfigureAwait(false);
+            await base.HandleRawMessageAsync(rawMessage).ConfigureAwait(false);
 
             try
             {
