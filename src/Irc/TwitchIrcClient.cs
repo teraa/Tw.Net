@@ -16,7 +16,6 @@ namespace Twitch.Irc
         private readonly TimeSpan _loginTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
-        private readonly SemaphoreSlim _connectSem;
         private readonly Timer _pingTimer;
         private string? _login;
         private string? _token;
@@ -24,8 +23,6 @@ namespace Twitch.Irc
         public TwitchIrcClient(ISocketClient client, ILogger? logger = null)
             : base(client, logger)
         {
-            _connectSem = new SemaphoreSlim(1, 1);
-
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
@@ -71,58 +68,46 @@ namespace Twitch.Irc
         {
             return ConnectAsync(AnonLogin, "", cancellationToken);
         }
-        public async Task ConnectAsync(string login, string token, CancellationToken cancellationToken = default)
+        public Task ConnectAsync(string login, string token, CancellationToken cancellationToken = default)
         {
-            await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                _login = login ?? throw new ArgumentNullException(nameof(login));
-                _token = token ?? throw new ArgumentNullException(nameof(token));
-                await base.ConnectAsync(cancellationToken).ConfigureAwait(false);
-
-                await RequestCapabilitiesAsync().ConfigureAwait(false);
-
-                if (!await LoginAsync(cancellationToken).ConfigureAwait(false))
-                    return;
-
-                if (_pingInterval > TimeSpan.Zero)
-                {
-                    _pingTimer.Interval = _pingInterval.TotalMilliseconds;
-                    _pingTimer.Enabled = true;
-                }
-
-                await _eventInvoker.InvokeAsync(Ready, nameof(Ready)).ConfigureAwait(false);
-            }
-            finally
-            {
-                _connectSem.Release();
-            }
+            _login = login ?? throw new ArgumentNullException(nameof(login));
+            _token = token ?? throw new ArgumentNullException(nameof(token));
+            return base.ConnectAsync(cancellationToken);
         }
 
-        public new async Task DisconnectAsync()
+        public new Task DisconnectAsync()
         {
-            await _connectSem.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                await base.DisconnectAsync().ConfigureAwait(false);
-            }
-            finally
-            {
-                _connectSem.Release();
-            }
+            return base.DisconnectAsync();
         }
 
-        protected override Task HandleDisconnectAsync()
+        #region overrides
+        protected override async Task ConnectInternalAsync(CancellationToken cancellationToken)
         {
-            _pingTimer.Enabled = false;
-            return base.HandleDisconnectAsync();
+            await RequestCapabilitiesAsync().ConfigureAwait(false);
+
+            if (!await LoginAsync(cancellationToken).ConfigureAwait(false))
+                return;
+
+            if (_pingInterval > TimeSpan.Zero)
+            {
+                _pingTimer.Interval = _pingInterval.TotalMilliseconds;
+                _pingTimer.Enabled = true;
+            }
+
+            await _eventInvoker.InvokeAsync(Ready, nameof(Ready)).ConfigureAwait(false);
         }
 
-        protected override Task ReconnectAsync()
+        protected override Task ReconnectInternalAsync()
         {
             return ConnectAsync(_login!, _token!);
         }
 
+        protected override Task DisconnectInternalAsync()
+        {
+            _pingTimer.Enabled = false;
+            return Task.CompletedTask;
+        }
+        #endregion overrides
 
         public async Task SendAsync(IrcMessage message)
         {
@@ -211,8 +196,6 @@ namespace Twitch.Irc
 
         protected override async Task HandleRawMessageAsync(string rawMessage)
         {
-            await base.HandleRawMessageAsync(rawMessage).ConfigureAwait(false);
-
             try
             {
                 var ircMessage = IrcMessage.Parse(rawMessage);
