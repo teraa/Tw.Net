@@ -45,6 +45,7 @@ namespace Twitch.Irc
         public event Func<Task>? Disconnected;
         public event Func<string, Task>? RawMessageSent;
         public event Func<string, Task>? RawMessageReceived;
+        public event Func<Task>? Ready;
         public event Func<IrcMessage, Task>? IrcMessageSent;
         public event Func<IrcMessage, Task>? IrcMessageReceived;
         #endregion events
@@ -94,7 +95,7 @@ namespace Twitch.Irc
                 _pingTimer.Interval = _pingInterval.TotalMilliseconds;
                 _pingTimer.Enabled = true;
 
-                await _eventInvoker.InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
+                await _eventInvoker.InvokeAsync(Ready, nameof(Ready)).ConfigureAwait(false);
             }
             finally
             {
@@ -138,6 +139,8 @@ namespace Twitch.Irc
 
             await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
             _listenerTask = ListenAsync();
+
+            await _eventInvoker.InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
         }
 
         private Task HandleDisconnectAsync()
