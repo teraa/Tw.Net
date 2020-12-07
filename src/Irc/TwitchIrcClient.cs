@@ -140,9 +140,14 @@ namespace Twitch.Irc
             _listenerTask = ListenAsync();
         }
 
-        private async Task BaseHandleDisconnectAsync()
+        private Task HandleDisconnectAsync()
         {
             _pingTimer.Enabled = false;
+            return BaseHandleDisconnectAsync();
+        }
+
+        private async Task BaseHandleDisconnectAsync()
+        {
             _client.Disconnect();
 
             await _eventInvoker.InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
