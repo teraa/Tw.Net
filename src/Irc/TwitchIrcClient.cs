@@ -157,13 +157,18 @@ namespace Twitch.Irc
                 try
                 {
                     // TODO: Delay
-                    await ConnectAsync(_login!, _token!, default).ConfigureAwait(false);
+                    await ReconnectAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     _logger?.LogError(ex, "Exception thrown while trying to reconnect");
                 }
             }
+        }
+
+        private Task ReconnectAsync()
+        {
+            return ConnectAsync(_login!, _token!, default);
         }
 
         public async Task SendRawAsync(string message)
