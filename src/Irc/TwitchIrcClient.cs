@@ -64,6 +64,13 @@ namespace Twitch.Irc
             => _login?.StartsWith(AnonLoginPrefix, StringComparison.OrdinalIgnoreCase) == true;
         #endregion properties
 
+        public async Task SendAsync(IrcMessage message)
+        {
+            var raw = message.ToString();
+            await SendRawAsync(raw).ConfigureAwait(false);
+            await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
+        }
+
         public new Task ConnectAsync(CancellationToken cancellationToken = default)
         {
             return ConnectAsync(AnonLogin, "", cancellationToken);
@@ -107,14 +114,20 @@ namespace Twitch.Irc
             _pingTimer.Enabled = false;
             return Task.CompletedTask;
         }
-        #endregion overrides
 
-        public async Task SendAsync(IrcMessage message)
+        protected override async Task HandleRawMessageAsync(string rawMessage)
         {
-            var raw = message.ToString();
-            await SendRawAsync(raw).ConfigureAwait(false);
-            await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
+            try
+            {
+                var ircMessage = IrcMessage.Parse(rawMessage);
+                await HandleIrcMessageAsync(ircMessage).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Exception thrown while parsing IRC message: {rawMessage}");
+            }
         }
+        #endregion overrides
 
         private async Task<IrcMessage?> GetNextMessageAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
         {
@@ -192,19 +205,6 @@ namespace Twitch.Irc
             }
 
             return true;
-        }
-
-        protected override async Task HandleRawMessageAsync(string rawMessage)
-        {
-            try
-            {
-                var ircMessage = IrcMessage.Parse(rawMessage);
-                await HandleIrcMessageAsync(ircMessage).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Exception thrown while parsing IRC message: {rawMessage}");
-            }
         }
 
         private async Task HandleIrcMessageAsync(IrcMessage ircMessage)
