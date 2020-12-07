@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    internal class AsyncEventInvoker
+    public class AsyncEventInvoker
     {
         private readonly TimeSpan _warnTimeout;
         private readonly ILogger? _logger;
