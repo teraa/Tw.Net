@@ -85,8 +85,11 @@ namespace Twitch.Irc
                 if (!await LoginAsync(cancellationToken).ConfigureAwait(false))
                     return;
 
-                _pingTimer.Interval = _pingInterval.TotalMilliseconds;
-                _pingTimer.Enabled = true;
+                if (_pingInterval > TimeSpan.Zero)
+                {
+                    _pingTimer.Interval = _pingInterval.TotalMilliseconds;
+                    _pingTimer.Enabled = true;
+                }
 
                 await _eventInvoker.InvokeAsync(Ready, nameof(Ready)).ConfigureAwait(false);
             }
