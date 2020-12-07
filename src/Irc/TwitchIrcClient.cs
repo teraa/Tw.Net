@@ -266,7 +266,7 @@ namespace Twitch.Irc
                     return;
 
                 var response = await GetNextMessageAsync(x => x.Command == IrcCommand.PONG && x.Content?.Text == text,
-                    _loginTimeout, cancellationToken).ConfigureAwait(false);
+                    _pongTimeout, cancellationToken).ConfigureAwait(false);
 
                 if (response is null)
                 {
