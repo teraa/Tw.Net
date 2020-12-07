@@ -71,7 +71,7 @@ namespace Twitch.Irc
             await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
         }
 
-        public new Task ConnectAsync(CancellationToken cancellationToken = default)
+        public override Task ConnectAsync(CancellationToken cancellationToken = default)
         {
             return ConnectAsync(AnonLogin, "", cancellationToken);
         }
@@ -80,11 +80,6 @@ namespace Twitch.Irc
             _login = login ?? throw new ArgumentNullException(nameof(login));
             _token = token ?? throw new ArgumentNullException(nameof(token));
             return base.ConnectAsync(cancellationToken);
-        }
-
-        public new Task DisconnectAsync()
-        {
-            return base.DisconnectAsync();
         }
 
         #region overrides

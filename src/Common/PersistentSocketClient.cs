@@ -37,12 +37,16 @@ namespace Twitch
             await _eventInvoker.InvokeAsync(RawMessageSent, nameof(RawMessageSent), message).ConfigureAwait(false);
         }
 
-        protected abstract Task ConnectInternalAsync(CancellationToken cancellationToken);
-        protected abstract Task ReconnectInternalAsync();
-        protected abstract Task DisconnectInternalAsync();
-        protected abstract Task HandleRawMessageAsync(string rawMessage);
+        protected virtual Task ConnectInternalAsync(CancellationToken cancellationToken)
+            => Task.CompletedTask;
+        protected virtual Task ReconnectInternalAsync()
+            => ConnectAsync(default);
+        protected virtual Task DisconnectInternalAsync()
+            => Task.CompletedTask;
+        protected virtual Task HandleRawMessageAsync(string rawMessage)
+            => Task.CompletedTask;
 
-        protected async Task ConnectAsync(CancellationToken cancellationToken)
+        public virtual async Task ConnectAsync(CancellationToken cancellationToken)
         {
             await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
@@ -63,7 +67,7 @@ namespace Twitch
             }
         }
 
-        protected async Task DisconnectAsync()
+        public virtual async Task DisconnectAsync()
         {
             await _connectSem.WaitAsync().ConfigureAwait(false);
             try
