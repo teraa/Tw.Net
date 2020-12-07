@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System;
+using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -80,7 +81,9 @@ namespace Twitch.Irc
                 await base.ConnectAsync(cancellationToken).ConfigureAwait(false);
 
                 await RequestCapabilitiesAsync().ConfigureAwait(false);
-                await LoginAsync(cancellationToken).ConfigureAwait(false);
+
+                if (!await LoginAsync(cancellationToken).ConfigureAwait(false))
+                    return;
 
                 _pingTimer.Interval = _pingInterval.TotalMilliseconds;
                 _pingTimer.Enabled = true;
@@ -163,7 +166,7 @@ namespace Twitch.Irc
             await SendAsync(capReq).ConfigureAwait(false);
         }
 
-        private async Task LoginAsync(CancellationToken cancellationToken)
+        private async Task<bool> LoginAsync(CancellationToken cancellationToken)
         {
             var passReq = new IrcMessage
             {
@@ -188,17 +191,19 @@ namespace Twitch.Irc
                 {
                     _logger?.LogWarning("Login timed out after " + _loginTimeout.ToString());
                     _disconnectTokenSource?.Cancel();
+                    return false;
                 }
                 else if (response.Command == IrcCommand.NOTICE)
                 {
-                    _logger?.LogError(response.Content?.Text ?? "Login failed");
-                    _stoppingTokenSource?.Cancel();
+                    throw new AuthenticationException(response.Content?.Text ?? "Login failed");
                 }
                 else
                 {
                     // TODO: Set GLOBALUSERSTATE data
                 }
             }
+
+            return true;
         }
 
         protected override async Task HandleRawMessageAsync(string rawMessage)
