@@ -5,5 +5,6 @@
     <Authors>teraa</Authors>
     <Company>teraa</Company>
     <RepositoryUrl>https://github.com/teraa/Tw.Net</RepositoryUrl>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 </Project>
