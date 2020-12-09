@@ -2,6 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageId>Tw.Net.Irc</PackageId>
+    <VersionPrefix>0.0.1</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <Authors>teraa</Authors>
+    <Company>teraa</Company>
+    <RepositoryUrl>https://github.com/teraa/HelloWorld</RepositoryUrl>
     <AssemblyName>Tw.Net.Irc</AssemblyName>
     <RootNamespace>Twitch.Irc</RootNamespace>
     <Nullable>enable</Nullable>

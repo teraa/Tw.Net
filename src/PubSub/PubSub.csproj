@@ -2,6 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageId>Tw.Net.PubSub</PackageId>
+    <VersionPrefix>0.0.1</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <Authors>teraa</Authors>
+    <Company>teraa</Company>
+    <RepositoryUrl>https://github.com/teraa/Tw.Net</RepositoryUrl>
     <AssemblyName>Tw.Net.PubSub</AssemblyName>
     <RootNamespace>Twitch.PubSub</RootNamespace>
     <Nullable>enable</Nullable>
