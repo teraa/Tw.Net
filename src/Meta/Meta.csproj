@@ -4,6 +4,7 @@
     <TargetFramework>net5.0</TargetFramework>
     <PackageId>Twitch.Net</PackageId>
     <AssemblyName>Twitch.Net</AssemblyName>
+    <Description>Meta package containing all other packages.</Description>
   </PropertyGroup>
 
   <ItemGroup>
