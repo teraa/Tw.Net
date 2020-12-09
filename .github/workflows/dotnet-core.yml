@@ -27,7 +27,7 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Test
-      run: dotnet test --configuration Release --no-build --verbosity normal
+      run: dotnet test --configuration Release --no-build --verbosity minimal
 
     - name: Pack
       run: dotnet pack --configuration Release --no-build --version-suffix alpha.$GITHUB_RUN_NUMBER --output nupkgs
