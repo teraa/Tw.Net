@@ -58,7 +58,7 @@ jobs:
         path: nupkgs
 
     - name: Push
-      run: dotnet nuget push "nupkgs/*.nupkg" --source github --skip-duplicate
+      run: dotnet nuget push "nupkgs/*.nupkg" --source https://nuget.pkg.github.com/teraa/index.json --api-key $GITHUB_TOKEN --skip-duplicate
 
 env:
   DOTNET_NOLOGO : true
