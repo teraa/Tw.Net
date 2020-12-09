@@ -58,7 +58,7 @@ jobs:
         path: nupkgs
 
     - name: Push
-      run: dotnet nuget push "nupkgs/*.nupkg" --source github
+      run: dotnet nuget push "nupkgs/*.nupkg" --source github --skip-duplicate
 
 env:
   DOTNET_NOLOGO : true
