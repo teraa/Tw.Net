@@ -7,7 +7,7 @@
     <VersionSuffix>alpha</VersionSuffix>
     <Authors>teraa</Authors>
     <Company>teraa</Company>
-    <RepositoryUrl>https://github.com/teraa/HelloWorld</RepositoryUrl>
+    <RepositoryUrl>https://github.com/teraa/Tw.Net</RepositoryUrl>
     <AssemblyName>Tw.Net.Irc</AssemblyName>
     <RootNamespace>Twitch.Irc</RootNamespace>
     <Nullable>enable</Nullable>
