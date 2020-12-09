@@ -3,16 +3,18 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30709.132
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F917843A-DBEA-4734-8585-77503BF92299}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+		LICENSE = LICENSE
+		Tw.Net.targets = Tw.Net.targets
+	EndProjectSection
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Common", "src\Common\Common.csproj", "{934FA2AE-CABF-41D8-B86D-9D3065547C71}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Irc", "src\Irc\Irc.csproj", "{36CE9D82-8D8A-4243-BF62-2FF5CCEFCF8F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{F917843A-DBEA-4734-8585-77503BF92299}"
-	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PubSub", "src\PubSub\PubSub.csproj", "{DB6556CC-7CEB-4E15-A4F4-07C04FA2E440}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PubSub", "src\PubSub\PubSub.csproj", "{DB6556CC-7CEB-4E15-A4F4-07C04FA2E440}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
