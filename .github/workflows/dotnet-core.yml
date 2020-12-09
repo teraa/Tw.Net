@@ -59,8 +59,9 @@ jobs:
 
     - name: Push
       run: dotnet nuget push "nupkgs/*.nupkg" --source https://nuget.pkg.github.com/teraa/index.json --api-key $GITHUB_TOKEN --skip-duplicate
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 env:
   DOTNET_NOLOGO : true
   DOTNET_CLI_TELEMETRY_OPTOUT : true
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
