@@ -313,11 +313,10 @@ namespace Twitch.Irc
         {
             var result = new StringBuilder();
 
-            if (Tags is not null)
+            if (Tags is not null && Tags.Count > 0)
             {
                 result.Append('@');
 
-                // There is always at least one element
                 foreach (var (key, value) in Tags)
                     result
                         .Append(key)
