@@ -5,9 +5,9 @@
     <Authors>teraa</Authors>
     <Company>teraa</Company>
     <PackageTags>twitch</PackageTags>
-    <PackageProjectUrl>https://github.com/teraa/Tw.Net</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/teraa/Twitch.Net</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <RepositoryUrl>https://github.com/teraa/Tw.Net</RepositoryUrl>
+    <RepositoryUrl>https://github.com/teraa/Twitch.Net</RepositoryUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>1591</NoWarn>
   </PropertyGroup>
