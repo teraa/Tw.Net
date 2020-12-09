@@ -1,13 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
+  <Import Project="../../Tw.Net.targets" />
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <PackageId>Tw.Net.Common</PackageId>
-    <VersionPrefix>0.0.1</VersionPrefix>
-    <VersionSuffix>alpha</VersionSuffix>
-    <Authors>teraa</Authors>
-    <Company>teraa</Company>
-    <RepositoryUrl>https://github.com/teraa/Tw.Net</RepositoryUrl>
     <AssemblyName>Tw.Net.Common</AssemblyName>
     <RootNamespace>Twitch</RootNamespace>
     <Nullable>enable</Nullable>
