@@ -31,16 +31,23 @@ jobs:
     - name: Test
       run: dotnet test --configuration Release --no-build --verbosity minimal
 
+    - name: Set prerelease pack options
+      if: ${{ github.event_name != 'release' && github.event_name != 'pull_request' }}
+      run: echo "options=--version-suffix alpha.$GITHUB_RUN_NUMBER" >> $GITHUB_ENV
+
     - name: Pack
-      run: dotnet pack --configuration Release --no-build --version-suffix alpha.$GITHUB_RUN_NUMBER --output nupkgs
+      if: ${{ github.event_name != 'pull_request' }}
+      run: dotnet pack --configuration Release --no-build --output nupkgs $options
 
     - name: Upload Artifacts
+      if: ${{ github.event_name != 'pull_request' }}
       uses: actions/upload-artifact@v2
       with:
         name: nupkgs
         path: nupkgs
 
   publish:
+    if: ${{ github.event_name != 'pull_request' }}
     name: Publish
     needs: [build]
     runs-on: ubuntu-latest
