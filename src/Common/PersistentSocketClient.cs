@@ -98,12 +98,18 @@ namespace Twitch
                 while (_disconnectTokenSource?.IsCancellationRequested == false)
                 {
                     var message = await _client.ReadAsync(_disconnectTokenSource.Token).ConfigureAwait(false);
-                    if (message is not null)
+                    if (message is { Length: > 0 })
                     {
                         await _eventInvoker.InvokeAsync(RawMessageReceived, nameof(RawMessageReceived), message).ConfigureAwait(false);
                         await HandleRawMessageAsync(message).ConfigureAwait(false);
                     }
-                    // TODO: else disconnect?
+#if DEBUG
+                    if (message is null)
+                    {
+                        // TODO: disconnect?
+                        _logger?.LogDebug("Read message is null");
+                    }
+#endif
                 }
             }
             catch (OperationCanceledException) { }
