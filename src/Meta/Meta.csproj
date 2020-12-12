@@ -2,9 +2,9 @@
   <Import Project="../../Tw.Net.targets" />
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <PackageId>Tw.Net</PackageId>
+    <PackageId>Twitch</PackageId>
     <AssemblyName>Tw.Net</AssemblyName>
-    <Description>Meta package containing all other packages.</Description>
+    <Description>Meta package containing all other Tw.Net packages.</Description>
   </PropertyGroup>
 
   <ItemGroup>
