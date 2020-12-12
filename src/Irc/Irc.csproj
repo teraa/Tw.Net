@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="../../Twitch.Net.targets" />
+  <Import Project="../../Tw.Net.targets" />
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <PackageId>Twitch.Net.Irc</PackageId>
-    <AssemblyName>Twitch.Net.Irc</AssemblyName>
+    <PackageId>Tw.Net.Irc</PackageId>
+    <AssemblyName>Tw.Net.Irc</AssemblyName>
     <RootNamespace>Twitch.Irc</RootNamespace>
     <Nullable>enable</Nullable>
   </PropertyGroup>

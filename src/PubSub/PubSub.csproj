@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="../../Twitch.Net.targets" />
+  <Import Project="../../Tw.Net.targets" />
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <PackageId>Twitch.Net.PubSub</PackageId>
-    <AssemblyName>Twitch.Net.PubSub</AssemblyName>
+    <PackageId>Tw.Net.PubSub</PackageId>
+    <AssemblyName>Tw.Net.PubSub</AssemblyName>
     <RootNamespace>Twitch.PubSub</RootNamespace>
     <Nullable>enable</Nullable>
   </PropertyGroup>
