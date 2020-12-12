@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Teraa.IrcMessageParser" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
