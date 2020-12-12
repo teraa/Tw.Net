@@ -95,33 +95,19 @@ namespace Twitch
             if (_client.State != WebSocketState.Open)
                 throw new InvalidOperationException($"Cannot send while socket is not open. Current state: {_client.State}.");
 
+            Memory<byte> bytes;
             int count = _encoding.GetByteCount(message);
             if (count <= _sbuf.Length)
             {
-                var segment = _sbuf[..count];
-                _encoding.GetBytes(message, segment.Span);
-                await _client.SendAsync(segment, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+                bytes = _sbuf[..count];
+                _encoding.GetBytes(message, bytes.Span);
             }
             else
             {
-                var arr = message.ToCharArray();
-                int p = 0;
-                do
-                {
-                    int len = count - p;
-                    if (len > _sbuf.Length)
-                        len = _sbuf.Length;
-
-                    var charSegment = new ArraySegment<char>(arr, p, len);
-                    var byteSegment = _sbuf[..len];
-                    _encoding.GetBytes(charSegment, byteSegment.Span);
-
-                    p += len;
-                    bool endOfMessage = p == count;
-
-                    await _client.SendAsync(byteSegment, WebSocketMessageType.Text, endOfMessage, CancellationToken.None).ConfigureAwait(false);
-                } while (p < count);
+                bytes = _encoding.GetBytes(message).AsMemory();
             }
+
+            await _client.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
         }
     }
 }
