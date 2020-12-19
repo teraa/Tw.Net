@@ -135,7 +135,7 @@ namespace Twitch
             {
                 try
                 {
-                    // TODO: Delay
+                    await Task.Delay(5000); // TODO
                     await ReconnectInternalAsync().ConfigureAwait(false);
                 }
                 catch (Exception ex)
