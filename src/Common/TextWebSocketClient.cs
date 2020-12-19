@@ -42,44 +42,46 @@ namespace Twitch
                 }
 
                 _client = null;
+
+                _sr?.Dispose();
+                _sr = null;
+
+                _ms?.Dispose();
+                _ms = null;
             }
             catch { }
         }
 
         public async Task<string?> ReadAsync(CancellationToken cancellationToken = default)
         {
-            if (_sr is not null)
-                return await ReadInternalAsync().ConfigureAwait(false);
-
-            if (_client is null)
-                throw new InvalidOperationException("Cannot read while disconnected.");
-            if (_client.State != WebSocketState.Open)
-                throw new InvalidOperationException($"Cannot read while socket is not open. Current state: {_client.State}.");
-
-            _ms = new MemoryStream();
-            ValueWebSocketReceiveResult wsresult;
-            do
+            if (_sr is null)
             {
-                wsresult = await _client.ReceiveAsync(_rbuf, cancellationToken).ConfigureAwait(false);
-                await _ms.WriteAsync(_rbuf[..wsresult.Count], cancellationToken).ConfigureAwait(false);
-            } while (!wsresult.EndOfMessage);
+                if (_client is null)
+                    throw new InvalidOperationException("Cannot read while disconnected.");
+                if (_client.State != WebSocketState.Open)
+                    throw new InvalidOperationException($"Cannot read while socket is not open. Current state: {_client.State}.");
 
-            _ms.Seek(0, SeekOrigin.Begin);
+                _ms = new MemoryStream();
+                ValueWebSocketReceiveResult wsresult;
+                do
+                {
+                    wsresult = await _client.ReceiveAsync(_rbuf, cancellationToken).ConfigureAwait(false);
+                    await _ms.WriteAsync(_rbuf[..wsresult.Count], cancellationToken).ConfigureAwait(false);
+                } while (!wsresult.EndOfMessage);
 
-            _sr = new StreamReader(_ms, _encoding);
-            return await ReadInternalAsync().ConfigureAwait(false);
-        }
+                _ms.Seek(0, SeekOrigin.Begin);
 
-        private async Task<string?> ReadInternalAsync()
-        {
-            var result = await _sr!.ReadLineAsync().ConfigureAwait(false);
+                _sr = new StreamReader(_ms, _encoding);
+            }
+
+            var result = await _sr.ReadLineAsync().ConfigureAwait(false);
 
             if (_sr.EndOfStream)
             {
                 _sr.Dispose();
                 _sr = null;
 
-                _ms?.Dispose();
+                _ms!.Dispose();
                 _ms = null;
             }
 
