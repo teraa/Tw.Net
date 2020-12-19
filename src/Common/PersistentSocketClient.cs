@@ -103,13 +103,14 @@ namespace Twitch
                         await _eventInvoker.InvokeAsync(RawMessageReceived, nameof(RawMessageReceived), message).ConfigureAwait(false);
                         await HandleRawMessageAsync(message).ConfigureAwait(false);
                     }
-#if DEBUG
-                    if (message is null)
+                    else if (message is null)
                     {
-                        // TODO: disconnect?
+#if DEBUG
                         _logger?.LogDebug("Read message is null");
-                    }
 #endif
+                        // End of stream, reconnect
+                        break;
+                    }
                 }
             }
             catch (OperationCanceledException) { }
