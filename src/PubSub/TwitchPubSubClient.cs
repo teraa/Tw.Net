@@ -120,11 +120,9 @@ private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
 #endif
             try
             {
-                var nonce = DateTimeOffset.UtcNow.ToString("u");
                 var request = new PubSubMessage
                 {
-                    Type = PubSubMessage.MessageType.PING,
-                    Nonce = nonce
+                    Type = PubSubMessage.MessageType.PING
                 };
 
                 await SendAsync(request).ConfigureAwait(false);
@@ -132,7 +130,7 @@ private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
                 if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
                     return;
 
-                var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.PONG && x.Nonce == nonce,
+                var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.PONG,
                     _pongTimeout, cancellationToken).ConfigureAwait(false);
 
                 if (response is null)
