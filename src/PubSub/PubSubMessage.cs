@@ -19,6 +19,7 @@ namespace Twitch.PubSub
 
         public enum MessageType : byte
         {
+            Unknown = 0,
             PING,
             PONG,
             LISTEN,
