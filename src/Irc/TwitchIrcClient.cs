@@ -51,6 +51,7 @@ namespace Twitch.Irc
                 ? value
                 : throw new ArgumentOutOfRangeException(nameof(PongTimeout));
         }
+
         public TimeSpan PingInterval
         {
             get => _pingInterval;
@@ -220,6 +221,7 @@ namespace Twitch.Irc
                         await SendAsync(pingResponse).ConfigureAwait(false);
                         break;
 
+                    // TODO
                     case IrcCommand.PRIVMSG:
                         break;
 
