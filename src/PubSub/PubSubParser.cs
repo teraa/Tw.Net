@@ -4,11 +4,11 @@ using System.Text.Json.Serialization;
 
 namespace Twitch.PubSub
 {
-    internal static class PubSubMessageParser
+    internal static class PubSubParser
     {
         private static readonly JsonSerializerOptions s_options;
 
-        static PubSubMessageParser()
+        static PubSubParser()
         {
             s_options = new JsonSerializerOptions
             {
@@ -21,13 +21,12 @@ namespace Twitch.PubSub
             };
         }
 
-        public static PubSubMessage Parse(string input)
+        public static T Parse<T>(string json)
         {
-            return JsonSerializer.Deserialize<PubSubMessage>(input, s_options)
-                ?? throw new FormatException("Message cannot be null");
+            return JsonSerializer.Deserialize<T>(json, s_options)
+                ?? throw new FormatException();
         }
 
-        // TODO: ?
         public static string ToJson<T>(T value)
         {
             return JsonSerializer.Serialize<T>(value, s_options);

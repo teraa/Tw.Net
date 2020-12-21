@@ -46,7 +46,7 @@ namespace Twitch.PubSub
 
         public async Task SendAsync(PubSubMessage message)
         {
-            var raw = PubSubMessageParser.ToJson(message);
+            var raw = PubSubParser.ToJson(message);
             await SendRawAsync(raw).ConfigureAwait(false);
             await _eventInvoker.InvokeAsync(PubSubMessageSent, nameof(PubSubMessageSent), message).ConfigureAwait(false);
         }
@@ -73,7 +73,7 @@ namespace Twitch.PubSub
         {
             try
             {
-                var pubSubMessage = PubSubMessageParser.Parse(rawMessage);
+                var pubSubMessage = PubSubParser.Parse<PubSubMessage>(rawMessage);
                 await HandlePubSubMessageAsync(pubSubMessage).ConfigureAwait(false);
             }
             catch (Exception ex)

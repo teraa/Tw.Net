@@ -8,7 +8,7 @@ namespace Twitch.PubSub.Tests
         [Fact]
         public void JsonToMessage()
         {
-            var message = PubSubMessageParser.Parse("{}");
+            var message = PubSubParser.Parse<PubSubMessage>("{}");
             Assert.Null(message.Data);
             Assert.Null(message.Error);
             Assert.Null(message.Nonce);
@@ -22,7 +22,7 @@ namespace Twitch.PubSub.Tests
             {
                 Type = PubSubMessage.MessageType.PING
             };
-            var json = PubSubMessageParser.ToJson(message);
+            var json = PubSubParser.ToJson(message);
 
             Assert.Equal(@"{""type"":""PING""}", json);
         }
