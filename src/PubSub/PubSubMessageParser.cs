@@ -13,7 +13,11 @@ namespace Twitch.PubSub
             s_options = new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                Converters = { new JsonStringEnumConverter() }
+                Converters =
+                {
+                    new JsonStringEnumConverter(),
+                    new TopicConverter()
+                }
             };
         }
 

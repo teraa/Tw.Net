@@ -26,16 +26,17 @@ namespace Twitch.PubSub
             RESPONSE,
             MESSAGE
         }
+
         public class MessageData
         {
             [JsonPropertyName("topic")]
-            public string? Topic { get; init; }
+            public Topic? Topic { get; init; }
 
             [JsonPropertyName("message")]
             public string? Message { get; init; }
 
             [JsonPropertyName("topics")]
-            public IReadOnlyList<string>? Topics { get; init; }
+            public IReadOnlyList<Topic>? Topics { get; init; }
 
             [JsonPropertyName("auth_token")]
             public string? AuthToken { get; init; }
