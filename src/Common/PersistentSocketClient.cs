@@ -49,6 +49,7 @@ namespace Twitch
         public virtual async Task ConnectAsync(CancellationToken cancellationToken)
         {
             await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
+            _logger?.LogDebug("Connecting");
             try
             {
                 _stoppingTokenSource = new CancellationTokenSource();
@@ -57,6 +58,7 @@ namespace Twitch
                 await _client.ConnectAsync(cancellationToken).ConfigureAwait(false);
                 _listenerTask = ListenAsync();
 
+                _logger?.LogInformation("Connected");
                 await _eventInvoker.InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
 
                 await ConnectInternalAsync(cancellationToken).ConfigureAwait(false);
@@ -70,6 +72,7 @@ namespace Twitch
         public virtual async Task DisconnectAsync()
         {
             await _connectSem.WaitAsync().ConfigureAwait(false);
+            _logger?.LogDebug("Disconnecting");
             try
             {
                 _stoppingTokenSource?.Cancel();
@@ -129,6 +132,7 @@ namespace Twitch
             await DisconnectInternalAsync().ConfigureAwait(false);
             _client.Disconnect();
 
+            _logger?.LogInformation("Disconnected");
             await _eventInvoker.InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
 
             if (_stoppingTokenSource?.IsCancellationRequested == false)
