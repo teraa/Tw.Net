@@ -12,6 +12,7 @@ namespace Twitch.PubSub
     {
         private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _responseTimeout = TimeSpan.FromSeconds(5);
         private readonly Timer _pingTimer;
 
         public TwitchPubSubClient(ISocketClient client, ILogger? logger)
@@ -44,6 +45,14 @@ namespace Twitch.PubSub
                 ? value
                 : throw new ArgumentOutOfRangeException(nameof(PingInterval));
         }
+
+        public TimeSpan ResponseTimeout
+        {
+            get => _responseTimeout;
+            init => _responseTimeout = value >= TimeSpan.Zero
+                ? value
+                : throw new ArgumentOutOfRangeException(nameof(ResponseTimeout));
+        }
         #endregion properties
 
         public async Task SendAsync(PubSubMessage message)
@@ -51,6 +60,29 @@ namespace Twitch.PubSub
             var raw = PubSubParser.ToJson(message);
             await SendRawAsync(raw).ConfigureAwait(false);
             await _eventInvoker.InvokeAsync(PubSubMessageSent, nameof(PubSubMessageSent), message).ConfigureAwait(false);
+        }
+
+        public async Task<PubSubMessage?> ListenAsync(Topic topic, string token, CancellationToken cancellationToken = default)
+        {
+            if (topic is null) throw new ArgumentNullException(nameof(topic));
+            if (token is null) throw new ArgumentNullException(nameof(token));
+
+            var message = new PubSubMessage
+            {
+                Type = PubSubMessage.MessageType.LISTEN,
+                Data = new PubSubMessage.MessageData
+                {
+                    Topics = new[] { topic },
+                    AuthToken = token
+                },
+                Nonce = Guid.NewGuid().ToString()
+            };
+
+            await SendAsync(message).ConfigureAwait(false);
+            var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
+                _responseTimeout, cancellationToken).ConfigureAwait(false);
+
+            return response;
         }
 
         #region overrides
