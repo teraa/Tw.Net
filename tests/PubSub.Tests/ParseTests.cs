@@ -579,5 +579,164 @@ namespace Twitch.PubSub.Tests
             Assert.False(act.IsFromAutomod);
             Assert.Equal("Unban deny\nNew line", act.ModeratorMessage);
         }
+
+        [Fact]
+        public void ParseModeratorAction_AutomodRejectedOld()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""data\"":{\""type\"":\""chat_login_moderation\"",\""moderation_action\"":\""automod_rejected\"",\""args\"":[\""<TARGET_LOGIN>\"",\""test phrase\"",\""identity\""],\""created_by\"":\""\"",\""created_by_user_id\"":\""\"",\""msg_id\"":\""<MESSAGE_ID>\"",\""target_user_id\"":\""<TARGET_ID>\"",\""target_user_login\"":\""<TARGET_LOGIN>\""}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Null(act.Moderator);
+            Assert.NotNull(act.Target);
+            Assert.Equal("<TARGET_ID>", act.Target.Id);
+            Assert.Equal("<TARGET_LOGIN>", act.Target.Login);
+            Assert.Equal("chat_login_moderation", act.Type);
+            Assert.Equal("automod_rejected", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(3, act.Args.Count);
+            Assert.Equal("<TARGET_LOGIN>", act.Args[0]);
+            Assert.Equal("test phrase", act.Args[1]);
+            Assert.Equal("identity", act.Args[2]);
+            Assert.Equal("<MESSAGE_ID>", act.MessageId);
+            Assert.True(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_AutomodRejected()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""type\"":\""moderation_action\"",\""data\"":{\""type\"":\""chat_login_moderation\"",\""moderation_action\"":\""automod_rejected\"",\""args\"":[\""<TARGET_LOGIN>\"",\""test phrase\"",\""identity\""],\""created_by\"":\""\"",\""created_by_user_id\"":\""\"",\""msg_id\"":\""<MESSAGE_ID>\"",\""target_user_id\"":\""<TARGET_ID>\"",\""target_user_login\"":\""<TARGET_LOGIN>\"",\""from_automod\"":false}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Null(act.Moderator);
+            Assert.NotNull(act.Target);
+            Assert.Equal("<TARGET_ID>", act.Target.Id);
+            Assert.Equal("<TARGET_LOGIN>", act.Target.Login);
+            Assert.Equal("chat_login_moderation", act.Type);
+            Assert.Equal("automod_rejected", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(3, act.Args.Count);
+            Assert.Equal("<TARGET_LOGIN>", act.Args[0]);
+            Assert.Equal("test phrase", act.Args[1]);
+            Assert.Equal("identity", act.Args[2]);
+            Assert.Equal("<MESSAGE_ID>", act.MessageId);
+            Assert.True(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_AutomodApprovedOld()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""data\"":{\""type\"":\""chat_login_moderation\"",\""moderation_action\"":\""approved_automod_message\"",\""args\"":[\""<TARGET_LOGIN>\""],\""created_by\"":\""<MOD_LOGIN>\"",\""created_by_user_id\"":\""<MOD_ID>\"",\""msg_id\"":\""<MESSAGE_ID>\"",\""target_user_id\"":\""<TARGET_ID>\"",\""target_user_login\"":\""<TARGET_LOGIN>\""}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.NotNull(act.Moderator);
+            Assert.Equal("<MOD_ID>", act.Moderator.Id);
+            Assert.Equal("<MOD_LOGIN>", act.Moderator.Login);
+            Assert.NotNull(act.Target);
+            Assert.Equal("<TARGET_ID>", act.Target.Id);
+            Assert.Equal("<TARGET_LOGIN>", act.Target.Login);
+            Assert.Equal("chat_login_moderation", act.Type);
+            Assert.Equal("approved_automod_message", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(1, act.Args.Count);
+            Assert.Equal("<TARGET_LOGIN>", act.Args[0]);
+            Assert.Equal("<MESSAGE_ID>", act.MessageId);
+            Assert.False(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_AddBlockedTerm()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""type\"":\""moderation_action\"",\""data\"":{\""type\"":\""chat_channel_moderation\"",\""moderation_action\"":\""add_blocked_term\"",\""args\"":[\""test phrase\""],\""created_by\"":\""<MOD_LOGIN>\"",\""created_by_user_id\"":\""<MOD_ID>\"",\""msg_id\"":\""\"",\""target_user_id\"":\""\"",\""target_user_login\"":\""\"",\""from_automod\"":false}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Equal("<MOD_ID>", act.Moderator.Id);
+            Assert.Equal("<MOD_LOGIN>", act.Moderator.Login);
+            Assert.Null(act.Target);
+            Assert.Equal("chat_channel_moderation", act.Type);
+            Assert.Equal("add_blocked_term", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(1, act.Args.Count);
+            Assert.Equal("test phrase", act.Args[0]);
+            Assert.Null(act.MessageId);
+            Assert.False(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_DeleteBlockedTerm()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""type\"":\""moderation_action\"",\""data\"":{\""type\"":\""chat_channel_moderation\"",\""moderation_action\"":\""delete_blocked_term\"",\""args\"":[\""test phrase\""],\""created_by\"":\""<MOD_LOGIN>\"",\""created_by_user_id\"":\""<MOD_ID>\"",\""msg_id\"":\""\"",\""target_user_id\"":\""\"",\""target_user_login\"":\""\"",\""from_automod\"":false}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Equal("<MOD_ID>", act.Moderator.Id);
+            Assert.Equal("<MOD_LOGIN>", act.Moderator.Login);
+            Assert.Null(act.Target);
+            Assert.Equal("chat_channel_moderation", act.Type);
+            Assert.Equal("delete_blocked_term", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(1, act.Args.Count);
+            Assert.Equal("test phrase", act.Args[0]);
+            Assert.Null(act.MessageId);
+            Assert.False(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_AddPermittedTerm()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""type\"":\""moderation_action\"",\""data\"":{\""type\"":\""chat_channel_moderation\"",\""moderation_action\"":\""add_permitted_term\"",\""args\"":[\""test phrase\""],\""created_by\"":\""<MOD_LOGIN>\"",\""created_by_user_id\"":\""<MOD_ID>\"",\""msg_id\"":\""\"",\""target_user_id\"":\""\"",\""target_user_login\"":\""\"",\""from_automod\"":false}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Equal("<MOD_ID>", act.Moderator.Id);
+            Assert.Equal("<MOD_LOGIN>", act.Moderator.Login);
+            Assert.Null(act.Target);
+            Assert.Equal("chat_channel_moderation", act.Type);
+            Assert.Equal("add_permitted_term", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(1, act.Args.Count);
+            Assert.Equal("test phrase", act.Args[0]);
+            Assert.Null(act.MessageId);
+            Assert.False(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_DeletePermittedTerm()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""type\"":\""moderation_action\"",\""data\"":{\""type\"":\""chat_channel_moderation\"",\""moderation_action\"":\""delete_permitted_term\"",\""args\"":[\""test phrase\""],\""created_by\"":\""<MOD_LOGIN>\"",\""created_by_user_id\"":\""<MOD_ID>\"",\""msg_id\"":\""\"",\""target_user_id\"":\""\"",\""target_user_login\"":\""\"",\""from_automod\"":false}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Equal("<MOD_ID>", act.Moderator.Id);
+            Assert.Equal("<MOD_LOGIN>", act.Moderator.Login);
+            Assert.Null(act.Target);
+            Assert.Equal("chat_channel_moderation", act.Type);
+            Assert.Equal("delete_permitted_term", act.Action);
+            Assert.NotNull(act.Args);
+            Assert.Equal(1, act.Args.Count);
+            Assert.Equal("test phrase", act.Args[0]);
+            Assert.Null(act.MessageId);
+            Assert.False(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
+
+        [Fact]
+        public void ParseModeratorAction_ModifiedAutomodProperties()
+        {
+            var json = @"{""type"":""MESSAGE"",""data"":{""topic"":""chat_moderator_actions.<MY_ID>.<CHANNEL_ID>"",""message"":""{\""type\"":\""moderation_action\"",\""data\"":{\""type\"":\""chat_channel_moderation\"",\""moderation_action\"":\""modified_automod_properties\"",\""args\"":null,\""created_by\"":\""<MOD_LOGIN>\"",\""created_by_user_id\"":\""<MOD_ID>\"",\""msg_id\"":\""\"",\""target_user_id\"":\""\"",\""target_user_login\"":\""\"",\""from_automod\"":false}}""}}";
+            var act = ParseModeratorAction(json);
+            Assert.Equal("<CHANNEL_ID>", act.ChannelId);
+            Assert.Equal("<MOD_ID>", act.Moderator.Id);
+            Assert.Equal("<MOD_LOGIN>", act.Moderator.Login);
+            Assert.Null(act.Target);
+            Assert.Equal("chat_channel_moderation", act.Type);
+            Assert.Equal("modified_automod_properties", act.Action);
+            Assert.Null(act.Args);
+            Assert.Null(act.MessageId);
+            Assert.False(act.IsFromAutomod);
+            Assert.Null(act.ModeratorMessage);
+        }
     }
 }

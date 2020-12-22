@@ -7,7 +7,7 @@ namespace Twitch.PubSub
     public class ModeratorAction
     {
         public string ChannelId { get; init; } = null!;
-        public User Moderator { get; init; } = null!;
+        public User? Moderator { get; init; } = null!;
         public User? Target { get; init; }
         public string Type { get; init; } = null!;
         public string Action { get; init; } = null!;
@@ -20,13 +20,18 @@ namespace Twitch.PubSub
         {
             var channelId = topic.Args[1];
             var data = message.Data ?? throw new ArgumentNullException(nameof(message.Data));
-            var moderator = new User
+
+            User? moderator = null;
+            var moderatorId = data.CreatedByUserId ??  data.CreatedById;
+            if (moderatorId is { Length: > 0})
             {
-                Id = data.CreatedByUserId ?? data.CreatedById
-                    ?? throw new ArgumentNullException(nameof(data.CreatedByUserId)),
-                Login = data.CreatedBy ?? data.CreatedByLogin
-                    ?? throw new ArgumentNullException(nameof(data.CreatedBy))
-            };
+                moderator = new User
+                {
+                    Id = moderatorId,
+                    Login = data.CreatedBy ?? data.CreatedByLogin
+                        ?? throw new ArgumentNullException(nameof(data.CreatedBy))
+                };
+            }
 
             User? target = null;
             if (data.TargetUserId is { Length: > 0 })
@@ -61,7 +66,7 @@ namespace Twitch.PubSub
             else
                 messageId = null;
 
-            var isFromAutomod = data.FromAutomod == true;
+            var isFromAutomod = data.FromAutomod == true || moderator is null;
 
             var moderatorMessage = data.ModeratorMessage;
 
