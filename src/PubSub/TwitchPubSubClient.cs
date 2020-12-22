@@ -15,7 +15,7 @@ namespace Twitch.PubSub
         private readonly TimeSpan _responseTimeout = TimeSpan.FromSeconds(5);
         private readonly Timer _pingTimer;
 
-        public TwitchPubSubClient(ISocketClient client, ILogger? logger)
+        public TwitchPubSubClient(ISocketClient client, ILogger<TwitchPubSubClient>? logger = null)
             : base(client, logger)
         {
             _pingTimer = new Timer();

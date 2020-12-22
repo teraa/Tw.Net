@@ -21,7 +21,7 @@ namespace Twitch.Irc
         private string? _login;
         private string? _token;
 
-        public TwitchIrcClient(ISocketClient client, ILogger? logger = null)
+        public TwitchIrcClient(ISocketClient client, ILogger<TwitchIrcClient>? logger = null)
             : base(client, logger)
         {
             _pingTimer = new Timer();
