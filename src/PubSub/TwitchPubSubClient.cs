@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Twitch.PubSub.Messages;
 using Timer = System.Timers.Timer;
 
 namespace Twitch.PubSub
@@ -24,6 +25,7 @@ namespace Twitch.PubSub
         #region events
         public event Func<PubSubMessage, Task>? PubSubMessageSent;
         public event Func<PubSubMessage, Task>? PubSubMessageReceived;
+        public event Func<Topic, ModeratorAction, Task>? ModeratorActionReceived;
         #endregion events
 
         #region properties
@@ -74,7 +76,7 @@ namespace Twitch.PubSub
             try
             {
                 var pubSubMessage = PubSubParser.Parse<PubSubMessage>(rawMessage);
-                await HandlePubSubMessageAsync(pubSubMessage).ConfigureAwait(false);
+                await HandlePubSubMessageAsync(rawMessage, pubSubMessage).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -83,11 +85,31 @@ namespace Twitch.PubSub
         }
         #endregion overrides
 
-        private async Task HandlePubSubMessageAsync(PubSubMessage pubSubMessage)
+        private async Task HandlePubSubMessageAsync(string rawMessage, PubSubMessage pubSubMessage)
         {
             await _eventInvoker.InvokeAsync(PubSubMessageReceived, nameof(PubSubMessageReceived), pubSubMessage).ConfigureAwait(false);
 
-            // TODO
+            if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
+                return;
+
+            try
+            {
+                var topic = pubSubMessage.Data!.Topic!;
+                switch (topic.Name)
+                {
+                    case "chat_moderator_actions":
+                        {
+                            var message = PubSubParser.Parse<ChatModeratorActionsMessage>(pubSubMessage.Data.Message!);
+                            var model = ModeratorAction.Create(topic, message);
+                            await _eventInvoker.InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, model);
+                        }
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, $"Exception thrown while handling message: {rawMessage}");
+            }
         }
 
         // TODO: duplicate code in IRC client
