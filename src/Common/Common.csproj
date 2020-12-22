@@ -6,7 +6,6 @@
     <AssemblyName>Tw.Net.Common</AssemblyName>
     <RootNamespace>Twitch</RootNamespace>
     <Nullable>enable</Nullable>
-    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
