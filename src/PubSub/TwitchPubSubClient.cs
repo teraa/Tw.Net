@@ -85,6 +85,27 @@ namespace Twitch.PubSub
             return response;
         }
 
+        public async Task<PubSubMessage?> UnlistenAsync(Topic topic, CancellationToken cancellationToken = default)
+        {
+            if (topic is null) throw new ArgumentNullException(nameof(topic));
+
+            var message = new PubSubMessage
+            {
+                Type = PubSubMessage.MessageType.UNLISTEN,
+                Data = new PubSubMessage.MessageData
+                {
+                    Topics = new[] { topic }
+                },
+                Nonce = Guid.NewGuid().ToString()
+            };
+
+            await SendAsync(message).ConfigureAwait(false);
+            var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
+                _responseTimeout, cancellationToken).ConfigureAwait(false);
+
+            return response;
+        }
+
         #region overrides
         protected override Task ConnectInternalAsync(CancellationToken cancellationToken)
         {
