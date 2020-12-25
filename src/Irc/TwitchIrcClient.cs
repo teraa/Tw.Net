@@ -14,16 +14,15 @@ namespace Twitch.Irc
         internal const string AnonLoginPrefix = "justinfan";
         internal const string AnonLogin = AnonLoginPrefix + "1";
 
-        private readonly TimeSpan _loginTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
+        private readonly TwitchIrcOptions _options;
         private readonly Timer _pingTimer;
         private string? _login;
         private string? _token;
 
-        public TwitchIrcClient(ISocketClient client, ILogger<TwitchIrcClient>? logger = null)
+        public TwitchIrcClient(ISocketClient client, TwitchIrcOptions? options = null, ILogger<TwitchIrcClient>? logger = null)
             : base(client, logger)
         {
+            _options = options ?? new();
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
@@ -35,36 +34,8 @@ namespace Twitch.Irc
         public event Func<IrcMessage, Task>? IrcMessageReceived;
         #endregion events
 
-        #region properties
-        public TimeSpan LoginTimeout
-        {
-            get => _loginTimeout;
-            init => _loginTimeout = value > TimeSpan.Zero
-                ? value
-                : throw new ArgumentOutOfRangeException(nameof(LoginTimeout));
-        }
-
-        public TimeSpan PongTimeout
-        {
-            get => _pongTimeout;
-            init => _pongTimeout = value > TimeSpan.Zero
-                ? value
-                : throw new ArgumentOutOfRangeException(nameof(PongTimeout));
-        }
-
-        public TimeSpan PingInterval
-        {
-            get => _pingInterval;
-            init => _pingInterval = value >= TimeSpan.Zero
-                ? value
-                : throw new ArgumentOutOfRangeException(nameof(PingInterval));
-        }
-
-        public bool RequestMembershipCapability { get; init; } = false;
-
         private bool IsAnonLogin
             => _login?.StartsWith(AnonLoginPrefix, StringComparison.OrdinalIgnoreCase) == true;
-        #endregion properties
 
         public async Task SendAsync(IrcMessage message)
         {
@@ -92,9 +63,9 @@ namespace Twitch.Irc
             if (!await LoginAsync(cancellationToken).ConfigureAwait(false))
                 return;
 
-            if (_pingInterval > TimeSpan.Zero)
+            if (_options.PingInterval > TimeSpan.Zero)
             {
-                _pingTimer.Interval = _pingInterval.TotalMilliseconds;
+                _pingTimer.Interval = _options.PingInterval.TotalMilliseconds;
                 _pingTimer.Enabled = true;
             }
 
@@ -151,7 +122,7 @@ namespace Twitch.Irc
         private async Task RequestCapabilitiesAsync()
         {
             var caps = "twitch.tv/tags twitch.tv/commands";
-            if (RequestMembershipCapability)
+            if (_options.RequestMembershipCapability)
                 caps += " twitch.tv/membership";
 
             var capReq = new IrcMessage
@@ -183,11 +154,11 @@ namespace Twitch.Irc
             if (!IsAnonLogin)
             {
                 Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.GLOBALUSERSTATE or IrcCommand.NOTICE };
-                var response = await GetNextMessageAsync(predicate, _loginTimeout, cancellationToken).ConfigureAwait(false);
+                var response = await GetNextMessageAsync(predicate, _options.LoginTimeout, cancellationToken).ConfigureAwait(false);
 
                 if (response is null)
                 {
-                    _logger?.LogWarning("Login timed out after " + _loginTimeout.ToString());
+                    _logger?.LogWarning("Login timed out after " + _options.LoginTimeout.ToString());
                     _disconnectTokenSource?.Cancel();
                     return false;
                 }
@@ -255,11 +226,11 @@ namespace Twitch.Irc
                     return;
 
                 var response = await GetNextMessageAsync(x => x.Command == IrcCommand.PONG && x.Content?.Text == text,
-                    _pongTimeout, cancellationToken).ConfigureAwait(false);
+                    _options.PongTimeout, cancellationToken).ConfigureAwait(false);
 
                 if (response is null)
                 {
-                    _logger?.LogWarning($"No PONG received within {_pongTimeout}");
+                    _logger?.LogWarning($"No PONG received within {_options.PongTimeout}");
                     _disconnectTokenSource?.Cancel();
                 }
             }

@@ -10,14 +10,13 @@ namespace Twitch.PubSub
 {
     public class TwitchPubSubClient : PersistentSocketClient
     {
-        private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
-        private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
-        private readonly TimeSpan _responseTimeout = TimeSpan.FromSeconds(5);
+        private readonly TwitchPubSubOptions _options;
         private readonly Timer _pingTimer;
 
-        public TwitchPubSubClient(ISocketClient client, ILogger<TwitchPubSubClient>? logger = null)
+        public TwitchPubSubClient(ISocketClient client, TwitchPubSubOptions? options = null, ILogger<TwitchPubSubClient>? logger = null)
             : base(client, logger)
         {
+            _options = options ?? new();
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
@@ -28,32 +27,6 @@ namespace Twitch.PubSub
         public event Func<PubSubMessage, Task>? PubSubMessageReceived;
         public event Func<Topic, ModeratorAction, Task>? ModeratorActionReceived;
         #endregion events
-
-        #region properties
-        public TimeSpan PongTimeout
-        {
-            get => _pongTimeout;
-            init => _pongTimeout = value > TimeSpan.Zero
-                ? value
-                : throw new ArgumentOutOfRangeException(nameof(PongTimeout));
-        }
-
-        public TimeSpan PingInterval
-        {
-            get => _pingInterval;
-            init => _pingInterval = value >= TimeSpan.Zero
-                ? value
-                : throw new ArgumentOutOfRangeException(nameof(PingInterval));
-        }
-
-        public TimeSpan ResponseTimeout
-        {
-            get => _responseTimeout;
-            init => _responseTimeout = value >= TimeSpan.Zero
-                ? value
-                : throw new ArgumentOutOfRangeException(nameof(ResponseTimeout));
-        }
-        #endregion properties
 
         public async Task SendAsync(PubSubMessage message)
         {
@@ -80,7 +53,7 @@ namespace Twitch.PubSub
 
             await SendAsync(message).ConfigureAwait(false);
             var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
-                _responseTimeout, cancellationToken).ConfigureAwait(false);
+                _options.ResponseTimeout, cancellationToken).ConfigureAwait(false);
 
             return response;
         }
@@ -101,7 +74,7 @@ namespace Twitch.PubSub
 
             await SendAsync(message).ConfigureAwait(false);
             var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
-                _responseTimeout, cancellationToken).ConfigureAwait(false);
+                _options.ResponseTimeout, cancellationToken).ConfigureAwait(false);
 
             return response;
         }
@@ -109,9 +82,9 @@ namespace Twitch.PubSub
         #region overrides
         protected override Task ConnectInternalAsync(CancellationToken cancellationToken)
         {
-            if (_pingInterval > TimeSpan.Zero)
+            if (_options.PingInterval > TimeSpan.Zero)
             {
-                _pingTimer.Interval = _pingInterval.TotalMilliseconds;
+                _pingTimer.Interval = _options.PingInterval.TotalMilliseconds;
                 _pingTimer.Enabled = true;
             }
 
@@ -188,7 +161,7 @@ namespace Twitch.PubSub
             }
         }
 
-private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
+        private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {
 #if DEBUG
             ((Timer)sender).Enabled = false;
@@ -206,11 +179,11 @@ private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
                     return;
 
                 var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.PONG,
-                    _pongTimeout, cancellationToken).ConfigureAwait(false);
+                    _options.PongTimeout, cancellationToken).ConfigureAwait(false);
 
                 if (response is null)
                 {
-                    _logger?.LogWarning($"No PONG received within {_pongTimeout}");
+                    _logger?.LogWarning($"No PONG received within {_options.PongTimeout}");
                     _disconnectTokenSource?.Cancel();
                 }
             }
