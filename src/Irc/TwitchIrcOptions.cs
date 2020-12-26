@@ -33,5 +33,9 @@ namespace Twitch.Irc
         }
 
         public bool RequestMembershipCapability { get; init; } = false;
+
+        public Bucket JoinBucket { get; init; } = new Bucket { Size = 20, RefillRate = TimeSpan.FromSeconds(10) };
+
+        public Bucket CommandBucket { get; init; } = new Bucket { Size = 20, RefillRate = TimeSpan.FromSeconds(30) };
     }
 }

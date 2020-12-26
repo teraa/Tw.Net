@@ -16,6 +16,7 @@ namespace Twitch.Irc
 
         private readonly TwitchIrcOptions _options;
         private readonly Timer _pingTimer;
+        private readonly IRateLimiter _joinLimiter, _commandLimiter;
         private string? _login;
         private string? _token;
 
@@ -26,6 +27,8 @@ namespace Twitch.Irc
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
+            _joinLimiter = new RateLimiter(_options.JoinBucket);
+            _commandLimiter = new RateLimiter(_options.CommandBucket);
         }
 
         #region events
@@ -37,10 +40,22 @@ namespace Twitch.Irc
         private bool IsAnonLogin
             => _login?.StartsWith(AnonLoginPrefix, StringComparison.OrdinalIgnoreCase) == true;
 
-        public async Task SendAsync(IrcMessage message)
+        public async Task SendAsync(IrcMessage message, CancellationToken cancellationToken = default)
         {
             var raw = message.ToString();
-            await SendRawAsync(raw).ConfigureAwait(false);
+
+            var limiter = message.Command switch
+            {
+                IrcCommand.JOIN => _joinLimiter,
+                IrcCommand.PRIVMSG => _commandLimiter,
+                _ => null
+            };
+
+            if (limiter is null)
+                await SendRawAsync(raw).ConfigureAwait(false);
+            else
+                await limiter.Perform(() => SendRawAsync(raw), cancellationToken).ConfigureAwait(false);
+
             await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
         }
 
