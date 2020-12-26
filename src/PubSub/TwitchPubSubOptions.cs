@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace Twitch.PubSub
 {
@@ -7,6 +8,11 @@ namespace Twitch.PubSub
         private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _responseTimeout = TimeSpan.FromSeconds(5);
+
+        public TwitchPubSubOptions()
+        {
+            SocketClientProvider = () => new TextWebSocketClient(new Uri("wss://pubsub-edge.twitch.tv"), new UTF8Encoding(false));
+        }
 
         public TimeSpan PongTimeout
         {

@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace Twitch.Irc
 {
@@ -7,6 +8,11 @@ namespace Twitch.Irc
         private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
         private readonly TimeSpan _loginTimeout = TimeSpan.FromSeconds(5);
+
+        public TwitchIrcOptions()
+        {
+            SocketClientProvider = () => new TextWebSocketClient(new Uri("wss://irc-ws.chat.twitch.tv:443"), new UTF8Encoding(false));
+        }
 
         public TimeSpan PongTimeout
         {

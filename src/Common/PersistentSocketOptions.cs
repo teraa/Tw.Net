@@ -1,5 +1,4 @@
 using System;
-using System.Text;
 
 namespace Twitch
 {
@@ -7,8 +6,7 @@ namespace Twitch
     {
         private readonly TimeSpan _handlerWarningTimeout = TimeSpan.FromSeconds(2);
 
-        public Func<ISocketClient> SocketClientProvider { get; init; }
-            = () => new TextWebSocketClient(new Uri("wss://irc-ws.chat.twitch.tv:443"), new UTF8Encoding(false));
+        public Func<ISocketClient> SocketClientProvider { get; init; } = null!;
 
         public TimeSpan HandlerWarningTimeout
         {
