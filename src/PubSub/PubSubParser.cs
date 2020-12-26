@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Twitch.PubSub.Messages;
 
 namespace Twitch.PubSub
 {
@@ -30,6 +31,23 @@ namespace Twitch.PubSub
         public static string ToJson<T>(T value)
         {
             return JsonSerializer.Serialize<T>(value, s_options);
+        }
+
+        public static object? ParseMessage(Topic topic, string messageJson)
+        {
+            if (topic is null) throw new ArgumentNullException(nameof(topic));
+            if (messageJson is null) throw new ArgumentNullException(nameof(messageJson));
+
+            switch (topic.Name)
+            {
+                case "chat_moderator_actions":
+                {
+                    var message = Parse<ChatModeratorActionsMessage>(messageJson);
+                    return ModeratorAction.Create(topic, message);
+                }
+            }
+
+            return null;
         }
     }
 }

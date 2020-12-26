@@ -55,16 +55,22 @@ namespace Twitch.PubSub.Tests
             Assert.Throws<FormatException>(() => Topic.Parse("invalid"));
         }
 
-        // TODO
-        public ModeratorAction ParseModeratorAction(string json)
+        public static object ParseModel(string json)
         {
             var msg = PubSubParser.Parse<PubSubMessage>(json);
             Assert.NotNull(msg);
             Assert.NotNull(msg.Data);
             Assert.NotNull(msg.Data.Message);
             Assert.NotNull(msg.Data.Topic);
-            var actMessage = PubSubParser.Parse<ChatModeratorActionsMessage>(msg.Data.Message);
-            return ModeratorAction.Create(msg.Data.Topic, actMessage);
+            return PubSubParser.ParseMessage(msg.Data.Topic, msg.Data.Message);
+        }
+
+        public static ModeratorAction ParseModeratorAction(string json)
+        {
+            var model = ParseModel(json);
+            Assert.NotNull(model);
+            Assert.IsType<ModeratorAction>(model);
+            return (ModeratorAction)model;
         }
 
         [Fact]

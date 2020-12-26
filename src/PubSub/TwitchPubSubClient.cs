@@ -118,20 +118,24 @@ namespace Twitch.PubSub
         {
             await _eventInvoker.InvokeAsync(PubSubMessageReceived, nameof(PubSubMessageReceived), pubSubMessage).ConfigureAwait(false);
 
-            if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
-                return;
 
             try
             {
-                var topic = pubSubMessage.Data!.Topic!;
-                switch (topic.Name)
+                if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
+                    return;
+
+                var data = pubSubMessage.Data!;
+                var topic = data.Topic!;
+                var messageJson = data.Message!;
+                var model = PubSubParser.ParseMessage(topic, messageJson);
+
+                switch (model)
                 {
-                    case "chat_moderator_actions":
-                        {
-                            var message = PubSubParser.Parse<ChatModeratorActionsMessage>(pubSubMessage.Data.Message!);
-                            var model = ModeratorAction.Create(topic, message);
-                            await _eventInvoker.InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, model);
-                        }
+                    case ModeratorAction m:
+                        await _eventInvoker.InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, m);
+                        break;
+                    default:
+                        _logger?.LogWarning($"Unhandled message: {rawMessage}");
                         break;
                 }
             }
