@@ -160,14 +160,14 @@ namespace Twitch.Irc
                 Command = IrcCommand.PASS,
                 Content = (Text: "oauth:" + _token, Ctcp: null)
             };
-            await SendAsync(passReq).ConfigureAwait(false);
+            await SendAsync(passReq, cancellationToken).ConfigureAwait(false);
 
             var nickReq = new IrcMessage
             {
                 Command = IrcCommand.NICK,
                 Content = (Text: _login!, Ctcp: null),
             };
-            await SendAsync(nickReq).ConfigureAwait(false);
+            await SendAsync(nickReq, cancellationToken).ConfigureAwait(false);
 
             if (!IsAnonLogin)
             {
