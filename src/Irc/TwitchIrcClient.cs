@@ -20,10 +20,13 @@ namespace Twitch.Irc
         private string? _login;
         private string? _token;
 
-        public TwitchIrcClient(ISocketClient client, TwitchIrcOptions? options = null, ILogger<TwitchIrcClient>? logger = null)
-            : base(client, logger)
+        public TwitchIrcClient(ILogger<TwitchIrcClient>? logger = null)
+            : this(new(), logger) { }
+
+        public TwitchIrcClient(TwitchIrcOptions options, ILogger<TwitchIrcClient>? logger = null)
+            : base(options, logger)
         {
-            _options = options ?? new();
+            _options = options;
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;

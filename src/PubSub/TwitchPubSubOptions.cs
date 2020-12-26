@@ -2,7 +2,7 @@ using System;
 
 namespace Twitch.PubSub
 {
-    public class TwitchPubSubOptions
+    public class TwitchPubSubOptions : PersistentSocketOptions
     {
         private readonly TimeSpan _pongTimeout = TimeSpan.FromSeconds(5);
         private readonly TimeSpan _pingInterval = TimeSpan.FromMinutes(1);
@@ -13,7 +13,7 @@ namespace Twitch.PubSub
             get => _pongTimeout;
             init => _pongTimeout = value > TimeSpan.Zero
                 ? value
-                : throw new ArgumentOutOfRangeException(nameof(PongTimeout), "Argument must be greater than zero");
+                : throw new ArgumentOutOfRangeException(nameof(PongTimeout), "Value must be greater than zero");
         }
 
         public TimeSpan PingInterval
@@ -21,7 +21,7 @@ namespace Twitch.PubSub
             get => _pingInterval;
             init => _pingInterval = value >= TimeSpan.Zero
                 ? value
-                : throw new ArgumentOutOfRangeException(nameof(PingInterval), "Argument must be greater than or equal to zero");
+                : throw new ArgumentOutOfRangeException(nameof(PingInterval), "Value must be greater than or equal to zero");
         }
 
         public TimeSpan ResponseTimeout
@@ -29,7 +29,7 @@ namespace Twitch.PubSub
             get => _responseTimeout;
             init => _responseTimeout = value > TimeSpan.Zero
                 ? value
-                : throw new ArgumentOutOfRangeException(nameof(ResponseTimeout), "Argument must be greater than zero");
+                : throw new ArgumentOutOfRangeException(nameof(ResponseTimeout), "Value must be greater than zero");
         }
     }
 }

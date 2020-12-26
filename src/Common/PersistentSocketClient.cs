@@ -9,18 +9,19 @@ namespace Twitch
     {
         protected readonly AsyncEventInvoker _eventInvoker;
         protected readonly ILogger? _logger;
-        protected readonly TimeSpan _eventWarningTimeout = TimeSpan.FromSeconds(2); // TODO
         protected CancellationTokenSource? _stoppingTokenSource;
         protected CancellationTokenSource? _disconnectTokenSource;
-        private readonly SemaphoreSlim _connectSem;
         private readonly ISocketClient _client;
+        private readonly PersistentSocketOptions _options;
+        private readonly SemaphoreSlim _connectSem;
         private Task? _listenerTask;
 
-        public PersistentSocketClient(ISocketClient client, ILogger? logger)
+        public PersistentSocketClient(PersistentSocketOptions options, ILogger? logger)
         {
-            _client = client ?? throw new ArgumentNullException(nameof(client));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
+            _client = _options.SocketClientProvider() ?? throw new ArgumentNullException(nameof(_client));
             _logger = logger;
-            _eventInvoker = new AsyncEventInvoker(_eventWarningTimeout, _logger);
+            _eventInvoker = new AsyncEventInvoker(_options.HandlerWarningTimeout, _logger);
             _connectSem = new SemaphoreSlim(1, 1);
         }
 

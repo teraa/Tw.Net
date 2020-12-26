@@ -13,10 +13,13 @@ namespace Twitch.PubSub
         private readonly TwitchPubSubOptions _options;
         private readonly Timer _pingTimer;
 
-        public TwitchPubSubClient(ISocketClient client, TwitchPubSubOptions? options = null, ILogger<TwitchPubSubClient>? logger = null)
-            : base(client, logger)
+        public TwitchPubSubClient(ILogger<TwitchPubSubClient>? logger = null)
+            : this(new(), logger) { }
+
+        public TwitchPubSubClient(TwitchPubSubOptions options, ILogger<TwitchPubSubClient>? logger = null)
+            : base(options, logger)
         {
-            _options = options ?? new();
+            _options = options;
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
