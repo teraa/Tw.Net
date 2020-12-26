@@ -147,7 +147,7 @@ namespace Twitch.Irc
             {
                 Command = IrcCommand.CAP,
                 Arg = "REQ",
-                Content = (Text: caps, Ctcp: null)
+                Content = new(caps)
             };
 
             await SendAsync(capReq).ConfigureAwait(false);
@@ -158,14 +158,14 @@ namespace Twitch.Irc
             var passReq = new IrcMessage
             {
                 Command = IrcCommand.PASS,
-                Content = (Text: "oauth:" + _token, Ctcp: null)
+                Content = new("oauth:" + _token)
             };
             await SendAsync(passReq, cancellationToken).ConfigureAwait(false);
 
             var nickReq = new IrcMessage
             {
                 Command = IrcCommand.NICK,
-                Content = (Text: _login!, Ctcp: null),
+                Content = new(_login!)
             };
             await SendAsync(nickReq, cancellationToken).ConfigureAwait(false);
 
@@ -235,7 +235,7 @@ namespace Twitch.Irc
                 var request = new IrcMessage
                 {
                     Command = IrcCommand.PING,
-                    Content = (Text: text, Ctcp: null)
+                    Content = new(text)
                 };
 
                 await SendAsync(request).ConfigureAwait(false);
