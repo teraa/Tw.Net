@@ -15,6 +15,7 @@ namespace Twitch
         private readonly PersistentSocketOptions _options;
         private readonly SemaphoreSlim _connectSem;
         private Task? _listenerTask;
+        private uint _connectAttempts;
 
         public PersistentSocketClient(PersistentSocketOptions options, ILogger? logger)
         {
@@ -23,6 +24,7 @@ namespace Twitch
             _logger = logger;
             _eventInvoker = new AsyncEventInvoker(_options.HandlerWarningTimeout, _logger);
             _connectSem = new SemaphoreSlim(1, 1);
+            _connectAttempts = 0;
         }
 
         #region events
@@ -61,6 +63,7 @@ namespace Twitch
 
                 _logger?.LogInformation("Connected");
                 await _eventInvoker.InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
+                _connectAttempts = 0;
 
                 await ConnectInternalAsync(cancellationToken).ConfigureAwait(false);
             }
@@ -138,12 +141,22 @@ namespace Twitch
 
             while (_stoppingTokenSource?.IsCancellationRequested == false)
             {
+                int seconds = _connectAttempts switch
+                {
+                    0 => 0,
+                    < 8 => 1 << ((int)_connectAttempts - 1),
+                    _ => 1 << 7
+                };
+                _connectAttempts++;
+                _logger?.LogDebug($"Reconnecting in {seconds}s");
+
                 try
                 {
-                    await Task.Delay(5000); // TODO
+                    await Task.Delay(TimeSpan.FromSeconds(seconds), _stoppingTokenSource.Token);
                     await ReconnectInternalAsync().ConfigureAwait(false);
                     break;
                 }
+                catch (OperationCanceledException) { }
                 catch (Exception ex)
                 {
                     _logger?.LogError(ex, "Exception thrown while trying to reconnect");
