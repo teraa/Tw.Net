@@ -136,12 +136,13 @@ namespace Twitch
             _logger?.LogInformation("Disconnected");
             await _eventInvoker.InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
 
-            if (_stoppingTokenSource?.IsCancellationRequested == false)
+            while (_stoppingTokenSource?.IsCancellationRequested == false)
             {
                 try
                 {
                     await Task.Delay(5000); // TODO
                     await ReconnectInternalAsync().ConfigureAwait(false);
+                    break;
                 }
                 catch (Exception ex)
                 {
