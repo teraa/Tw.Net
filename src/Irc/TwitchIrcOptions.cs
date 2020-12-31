@@ -40,8 +40,10 @@ namespace Twitch.Irc
 
         public bool RequestMembershipCapability { get; init; } = false;
 
-        public Bucket JoinBucket { get; init; } = new Bucket { Size = 20, RefillRate = TimeSpan.FromSeconds(10) };
+        public Func<LimitInfo, IRateLimiter> RateLimiterProvider { get; init; } = l => new SlidingWindowRateLimiter(l);
 
-        public Bucket CommandBucket { get; init; } = new Bucket { Size = 20, RefillRate = TimeSpan.FromSeconds(30) };
+        public LimitInfo JoinLimit { get; init; } = new LimitInfo(20, TimeSpan.FromSeconds(10));
+
+        public LimitInfo CommandLimit { get; init; } = new LimitInfo(20, TimeSpan.FromSeconds(30));
     }
 }

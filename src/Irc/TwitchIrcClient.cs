@@ -30,8 +30,8 @@ namespace Twitch.Irc
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
-            _joinLimiter = new RateLimiter(_options.JoinBucket);
-            _commandLimiter = new RateLimiter(_options.CommandBucket);
+            _joinLimiter = _options.RateLimiterProvider(_options.JoinLimit);
+            _commandLimiter = _options.RateLimiterProvider(_options.CommandLimit);
         }
 
         #region events

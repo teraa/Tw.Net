@@ -20,7 +20,7 @@ namespace Twitch
         public PersistentSocketClient(PersistentSocketOptions options, ILogger? logger)
         {
             _options = options ?? throw new ArgumentNullException(nameof(options));
-            _client = _options.SocketClientProvider() ?? throw new ArgumentNullException(nameof(_client));
+            _client = _options.SocketClientProvider();
             _logger = logger;
             _eventInvoker = new AsyncEventInvoker(_options.HandlerWarningTimeout, _logger);
             _connectSem = new SemaphoreSlim(1, 1);

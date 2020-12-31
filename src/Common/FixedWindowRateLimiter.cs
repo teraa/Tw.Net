@@ -6,23 +6,22 @@ using Timer = System.Timers.Timer;
 
 namespace Twitch
 {
-    public class RateLimiter : IRateLimiter, IDisposable
+    public class FixedWindowRateLimiter : IRateLimiter, IDisposable
     {
-        private readonly int _size;
+        private readonly LimitInfo _limit;
         private readonly SemaphoreSlim _sem;
         private readonly Timer _timer;
         private int _done;
         private bool disposedValue;
 
-        public RateLimiter(Bucket bucket)
+        public FixedWindowRateLimiter(LimitInfo limit)
         {
-            if (bucket is null) throw new ArgumentNullException(nameof(bucket));
-            _size = bucket.Size;
-            _sem = new(_size, _size);
+            _limit = limit ?? throw new ArgumentNullException(nameof(limit));
+            _sem = new(_limit.Count, _limit.Count);
             _timer = new()
             {
                 AutoReset = false,
-                Interval = bucket.RefillRate.TotalMilliseconds
+                Interval = _limit.Interval.TotalMilliseconds
             };
             _timer.Elapsed += Refill;
             _done = 0;
