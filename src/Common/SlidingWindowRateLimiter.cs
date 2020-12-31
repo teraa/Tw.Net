@@ -26,9 +26,9 @@ namespace Twitch
             {
                 if (_times.Count >= _limit.Count)
                 {
-                    var diff = DateTimeOffset.Now - _times.Peek();
-                    if (diff < _limit.Interval)
-                        await Task.Delay(_limit.Interval - diff, cancellationToken).ConfigureAwait(false);
+                    var delay = _limit.Interval - (DateTimeOffset.Now - _times.Peek());
+                    if (delay > TimeSpan.Zero)
+                        await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 
                     _times.Dequeue();
                 }
