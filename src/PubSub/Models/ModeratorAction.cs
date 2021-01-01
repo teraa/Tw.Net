@@ -6,15 +6,15 @@ namespace Twitch.PubSub
 {
     public class ModeratorAction
     {
-        public string ChannelId { get; init; } = null!;
-        public User? Moderator { get; init; } = null!;
-        public User? Target { get; init; }
-        public string Type { get; init; } = null!;
-        public string Action { get; init; } = null!;
-        public IReadOnlyList<string>? Args { get; init; }
-        public string? MessageId { get; init; }
-        public bool IsFromAutomod { get; init; }
-        public string? ModeratorMessage { get; init; }
+        public string ChannelId { get; private init; } = null!;
+        public User? Moderator { get; private init; } = null!;
+        public User? Target { get; private init; }
+        public string Type { get; private init; } = null!;
+        public string Action { get; private init; } = null!;
+        public IReadOnlyList<string>? Args { get; private init; }
+        public string? MessageId { get; private init; }
+        public bool IsFromAutomod { get; private init; }
+        public string? ModeratorMessage { get; private init; }
 
         internal static ModeratorAction Create(Topic topic, ChatModeratorActionsMessage message)
         {
