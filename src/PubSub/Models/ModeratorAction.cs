@@ -66,7 +66,7 @@ namespace Twitch.PubSub
             else
                 messageId = null;
 
-            var isFromAutomod = data.FromAutomod == true || moderator is null;
+            var isFromAutomod = data.FromAutomod == true;
 
             var moderatorMessage = data.ModeratorMessage;
 
