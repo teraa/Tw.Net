@@ -7,8 +7,14 @@ namespace Twitch.PubSub
 {
     public class Topic
     {
-        public string Name { get; init; } = null!;
-        public IReadOnlyList<string> Args { get; init; } = null!;
+        public string Name { get; }
+        public IReadOnlyList<string> Args { get; }
+
+        public Topic(string name, IReadOnlyList<string> args)
+        {
+            Name = name ?? throw new ArgumentNullException(nameof(name));
+            Args = args ?? throw new ArgumentNullException(nameof(args));
+        }
 
         public static Topic Parse(string input)
         {
@@ -19,14 +25,7 @@ namespace Twitch.PubSub
             if (parts.Length < 2)
                 throw new FormatException("Missing topic arguments");
 
-            string name = parts[0];
-            string[] args = parts[1..];
-
-            return new Topic
-            {
-                Name = name,
-                Args = args
-            };
+            return new Topic(name: parts[0], args: parts[1..]);
         }
 
         public override string ToString()
