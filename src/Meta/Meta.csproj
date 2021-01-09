@@ -11,6 +11,8 @@
     <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\Irc\Irc.csproj" />
     <ProjectReference Include="..\PubSub\PubSub.csproj" />
+    <ProjectReference Include="..\Rest.Helix\Rest.Helix.csproj" />
+    <ProjectReference Include="..\Rest\Rest.csproj" />
   </ItemGroup>
 
 </Project>
