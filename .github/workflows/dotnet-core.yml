@@ -7,6 +7,7 @@ on:
     branches: [ master ]
   release:
     types: [ released ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,7 +21,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.100
+        dotnet-version: '5.0.x'
 
     - name: Install dependencies
       run: dotnet restore
@@ -33,7 +34,9 @@ jobs:
 
     - name: Pack (Prerelease)
       id: pack-prerelease
-      if: github.event_name == 'push'
+      if: >
+        (github.event_name == 'push') ||
+        (github.event_name == 'workflow_dispatch')
       run: dotnet pack --configuration Release --no-build --output nupkgs --version-suffix alpha.$GITHUB_RUN_NUMBER
 
     - name: Pack (Release)
@@ -42,14 +45,19 @@ jobs:
       run: dotnet pack --configuration Release --no-build --output nupkgs
 
     - name: Upload Artifacts
-      if: (steps.pack-release.outcome == 'success') || (steps.pack-prerelease.outcome == 'success')
+      if: >
+        (steps.pack-release.outcome == 'success') ||
+        (steps.pack-prerelease.outcome == 'success')
       uses: actions/upload-artifact@v2
       with:
         name: nupkgs
         path: nupkgs
 
   publish:
-    if: (github.event_name == 'push') || (github.event_name == 'release')
+    if: >
+      (github.event_name == 'push') ||
+      (github.event_name == 'release') ||
+      (github.event_name == 'workflow_dispatch')
     name: Publish
     needs: [ build ]
     runs-on: ubuntu-latest
@@ -60,7 +68,7 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.100
+        dotnet-version: '5.0.x'
 
     - name: Download Artifacts
       uses: actions/download-artifact@v2
@@ -72,9 +80,11 @@ jobs:
       run: dotnet nuget push "nupkgs/*.nupkg" --source https://nuget.pkg.github.com/teraa/index.json --api-key ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
 
     # - name: Push (NuGet.org)
-    #   if: github.event_name == 'release'
+    #   if: >
+    #     (github.event_name == 'release') ||
+    #     (github.event_name == 'workflow_dispatch')
     #   run: dotnet nuget push "nupkgs/*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_TOKEN }} --skip-duplicate
 
 env:
-  DOTNET_NOLOGO : true
-  DOTNET_CLI_TELEMETRY_OPTOUT : true
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
