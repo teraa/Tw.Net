@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Twitch.Rest.Helix
 {
-    #nullable disable
+#nullable disable
     [DebuggerDisplay("Id = {Id,nq}")]
     public class Video
     {
@@ -94,5 +94,5 @@ namespace Twitch.Rest.Helix
         [JsonPropertyName("duration")]
         public string Duration { get; init; }
     }
-    #nullable restore
+#nullable restore
 }

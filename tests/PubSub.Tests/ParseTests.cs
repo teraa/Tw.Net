@@ -1,5 +1,4 @@
 using System;
-using Twitch.PubSub.Messages;
 using Xunit;
 
 namespace Twitch.PubSub.Tests

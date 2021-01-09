@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Twitch.Rest.Helix
 {
-    #nullable disable
+#nullable disable
     public class GetResponse<T>
     {
         [JsonPropertyName("data")]
@@ -11,5 +11,5 @@ namespace Twitch.Rest.Helix
         [JsonPropertyName("pagination")]
         public Pagination Pagination { get; init; }
     }
-    #nullable restore
+#nullable restore
 }

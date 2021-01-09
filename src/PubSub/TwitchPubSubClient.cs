@@ -3,7 +3,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
-using Twitch.PubSub.Messages;
 using Timer = System.Timers.Timer;
 
 namespace Twitch.PubSub

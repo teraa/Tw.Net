@@ -22,8 +22,8 @@ namespace Twitch.PubSub
             var data = message.Data ?? throw new ArgumentNullException(nameof(message.Data));
 
             User? moderator = null;
-            var moderatorId = data.CreatedByUserId ??  data.CreatedById;
-            if (moderatorId is { Length: > 0})
+            var moderatorId = data.CreatedByUserId ?? data.CreatedById;
+            if (moderatorId is { Length: > 0 })
             {
                 moderator = new User
                 {
@@ -61,7 +61,7 @@ namespace Twitch.PubSub
             string? messageId;
             if (string.Equals(action, "delete", StringComparison.Ordinal))
                 messageId = args![2];
-            else if (data.MsgId is { Length: > 0})
+            else if (data.MsgId is { Length: > 0 })
                 messageId = data.MsgId;
             else
                 messageId = null;

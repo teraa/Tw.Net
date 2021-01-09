@@ -41,10 +41,10 @@ namespace Twitch.PubSub
             switch (topic.Name)
             {
                 case "chat_moderator_actions":
-                {
-                    var message = Parse<ChatModeratorActionsMessage>(messageJson);
-                    return ModeratorAction.Create(topic, message);
-                }
+                    {
+                        var message = Parse<ChatModeratorActionsMessage>(messageJson);
+                        return ModeratorAction.Create(topic, message);
+                    }
             }
 
             return null;

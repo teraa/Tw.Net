@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace Twitch.Rest.Helix
 {
-    #nullable disable
+#nullable disable
     [DebuggerDisplay("Id = {Id,nq}, Login = {Login,nq}")]
     public class User
     {
@@ -38,5 +38,5 @@ namespace Twitch.Rest.Helix
         [JsonPropertyName("created_at")]
         public DateTimeOffset CreatedAt { get; init; }
     }
-    #nullable restore
+#nullable restore
 }
