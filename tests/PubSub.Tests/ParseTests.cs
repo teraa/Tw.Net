@@ -604,7 +604,7 @@ namespace Twitch.PubSub.Tests
             Assert.Equal("test phrase", act.Args[1]);
             Assert.Equal("identity", act.Args[2]);
             Assert.Equal("<MESSAGE_ID>", act.MessageId);
-            Assert.True(act.IsFromAutomod);
+            Assert.False(act.IsFromAutomod);
             Assert.Null(act.ModeratorMessage);
         }
 
@@ -626,7 +626,7 @@ namespace Twitch.PubSub.Tests
             Assert.Equal("test phrase", act.Args[1]);
             Assert.Equal("identity", act.Args[2]);
             Assert.Equal("<MESSAGE_ID>", act.MessageId);
-            Assert.True(act.IsFromAutomod);
+            Assert.False(act.IsFromAutomod);
             Assert.Null(act.ModeratorMessage);
         }
 
