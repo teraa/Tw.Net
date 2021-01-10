@@ -82,6 +82,9 @@ namespace Twitch.Rest.Helix
         public Task<GetResponse<Video>?> GetVideosAsync(GetVideosArgs args, CancellationToken cancellationToken = default)
             => GetAsync<Video>("videos", args, cancellationToken);
 
+        public Task<GetResponse<Follow>?> GetFollowsAsync(GetFollowsArgs args, CancellationToken cancellationToken = default)
+            => GetAsync<Follow>("users/follows", args, cancellationToken);
+
         private async Task<GetResponse<T>?> GetAsync<T>(string endpoint, IRequestArgs args, CancellationToken cancellationToken)
         {
             var requestUri = endpoint;
