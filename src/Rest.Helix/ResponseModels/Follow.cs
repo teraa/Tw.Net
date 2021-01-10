@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Twitch.Rest.Helix
@@ -20,7 +19,7 @@ namespace Twitch.Rest.Helix
         public string ToName { get; init; }
 
         [JsonPropertyName("followed_at")]
-        public string FollowedAt { get; init; }
+        public DateTimeOffset FollowedAt { get; init; }
     }
 #nullable restore
 }
