@@ -6,7 +6,7 @@ namespace Twitch.Rest.Helix
     public class TwitchRestOptions
     {
         public Func<string, string, IRestClient> RestClientProvider { get; init; }
-            = (clientId, token) => new HttpRestClient
+            = (clientId, token) => new RestClient
             (
                 new HttpClient
                 {

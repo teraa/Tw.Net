@@ -6,7 +6,7 @@ namespace Twitch.Rest
 {
     public interface IRestClient
     {
-        Task<TResponse?> SendAsync<TResponse>(HttpMethod httpMethod, string requestUri, CancellationToken cancellationToken)
+        Task<TResponse?> SendAsync<TResponse>(HttpMethod httpMethod, string endpoint, IRequestArgs? args, CancellationToken cancellationToken)
             where TResponse : class;
     }
 }

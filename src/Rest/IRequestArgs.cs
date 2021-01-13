@@ -1,4 +1,4 @@
 namespace Twitch.Rest
 {
-    internal interface IRequestArgs { }
+    public interface IRequestArgs { }
 }
