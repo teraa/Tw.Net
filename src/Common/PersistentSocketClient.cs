@@ -5,17 +5,17 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    public abstract class PersistentSocketClient
+    public abstract class PersistentSocketClient : IDisposable
     {
         protected readonly AsyncEventInvoker _eventInvoker;
         protected readonly ILogger? _logger;
-        protected CancellationTokenSource? _stoppingTokenSource;
-        protected CancellationTokenSource? _disconnectTokenSource;
+        protected CancellationTokenSource? _stoppingTokenSource, _disconnectTokenSource;
         private readonly ISocketClient _client;
         private readonly PersistentSocketOptions _options;
         private readonly SemaphoreSlim _connectSem;
         private Task? _listenerTask;
         private uint _connectAttempts;
+        private bool _disposedValue;
 
         public PersistentSocketClient(PersistentSocketOptions options, ILogger? logger)
         {
@@ -164,5 +164,26 @@ namespace Twitch
             }
         }
 
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    try { _stoppingTokenSource?.Dispose(); } catch { }
+                    try { _disconnectTokenSource?.Dispose(); } catch { }
+                    try { (_client as IDisposable)?.Dispose(); } catch { }
+                    try { (_connectSem as IDisposable)?.Dispose(); } catch { }
+                }
+
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
     }
 }

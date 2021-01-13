@@ -19,6 +19,7 @@ namespace Twitch.Irc
         private readonly IRateLimiter _joinLimiter, _commandLimiter;
         private string? _login;
         private string? _token;
+        private bool _disposedValue;
 
         public TwitchIrcClient(ILogger<TwitchIrcClient>? logger = null)
             : this(new(), logger) { }
@@ -259,6 +260,25 @@ namespace Twitch.Irc
 #if DEBUG
             ((Timer)sender).Enabled = true;
 #endif
+        }
+
+        ~TwitchIrcClient() => Dispose(disposing: false);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    try { _pingTimer.Dispose(); } catch { }
+                    try { (_joinLimiter as IDisposable)?.Dispose(); } catch { }
+                    try { (_commandLimiter as IDisposable)?.Dispose(); } catch { }
+                }
+
+                _disposedValue = true;
+
+                base.Dispose(disposing);
+            }
         }
     }
 }

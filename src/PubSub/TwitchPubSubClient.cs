@@ -11,6 +11,7 @@ namespace Twitch.PubSub
     {
         private readonly TwitchPubSubOptions _options;
         private readonly Timer _pingTimer;
+        private bool _disposedValue;
 
         public TwitchPubSubClient(ILogger<TwitchPubSubClient>? logger = null)
             : this(new(), logger) { }
@@ -200,6 +201,23 @@ namespace Twitch.PubSub
 #if DEBUG
             ((Timer)sender).Enabled = true;
 #endif
+        }
+
+        ~TwitchPubSubClient() => Dispose(disposing: false);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    try { _pingTimer.Dispose(); } catch { }
+                }
+
+                _disposedValue = true;
+
+                base.Dispose(disposing);
+            }
         }
     }
 }

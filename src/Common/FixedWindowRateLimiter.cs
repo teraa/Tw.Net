@@ -12,7 +12,7 @@ namespace Twitch
         private readonly SemaphoreSlim _sem;
         private readonly Timer _timer;
         private int _done;
-        private bool disposedValue;
+        private bool _disposedValue;
 
         public FixedWindowRateLimiter(LimitInfo limit)
         {
@@ -62,15 +62,15 @@ namespace Twitch
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!disposedValue)
+            if (!_disposedValue)
             {
                 if (disposing)
                 {
-                    _timer.Dispose();
-                    _sem.Dispose();
+                    try { _timer.Dispose(); } catch { }
+                    try { _sem.Dispose(); } catch { }
                 }
 
-                disposedValue = true;
+                _disposedValue = true;
             }
         }
 

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    public sealed class TextWebSocketClient : ISocketClient
+    public sealed class TextWebSocketClient : ISocketClient, IDisposable
     {
         private readonly Uri _uri;
         private readonly Encoding _encoding;
@@ -16,6 +16,7 @@ namespace Twitch
         private ClientWebSocket? _client;
         private MemoryStream? _ms;
         private StreamReader? _sr;
+        private bool _disposedValue;
 
         public TextWebSocketClient(Uri uri, Encoding encoding)
         {
@@ -110,6 +111,27 @@ namespace Twitch
             }
 
             await _client.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    try { _client?.Dispose(); } catch { }
+                    try { _ms?.Dispose(); } catch { }
+                    try { _sr?.Dispose(); } catch { }
+                }
+
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

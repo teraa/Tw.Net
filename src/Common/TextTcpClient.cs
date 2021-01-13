@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    public sealed class TextTcpClient : ISocketClient
+    public sealed class TextTcpClient : ISocketClient, IDisposable
     {
         private readonly string _hostname;
         private readonly ushort _port;
@@ -18,6 +18,7 @@ namespace Twitch
         private Stream? _stream;
         private StreamReader? _sr;
         private StreamWriter? _sw;
+        private bool _disposedValue;
 
         public TextTcpClient(string hostname, ushort port, bool ssl, Encoding encoding)
         {
@@ -82,6 +83,28 @@ namespace Twitch
 
             await _sw.WriteLineAsync(message).ConfigureAwait(false);
             await _sw.FlushAsync().ConfigureAwait(false);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    try { _client?.Dispose(); } catch { }
+                    try { _stream?.Dispose(); } catch { }
+                    try { _sr?.Dispose(); } catch { }
+                    try { _sw?.Dispose(); } catch { }
+                }
+
+                _disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }
