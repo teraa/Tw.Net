@@ -4,12 +4,12 @@ namespace Twitch
 {
     public class LimitInfo
     {
-        public int Count { get; }
+        public int Limit { get; }
         public TimeSpan Interval { get; }
 
         public LimitInfo(int count, TimeSpan interval)
         {
-            Count = count;
+            Limit = count;
             Interval = interval;
         }
     }

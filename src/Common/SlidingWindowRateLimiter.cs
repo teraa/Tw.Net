@@ -7,26 +7,29 @@ namespace Twitch
 {
     public class SlidingWindowRateLimiter : IRateLimiter, IDisposable
     {
-        private readonly LimitInfo _limit;
         private readonly SemaphoreSlim _sem;
         private Queue<DateTimeOffset> _times;
         private bool _disposedValue;
 
-        public SlidingWindowRateLimiter(LimitInfo limit)
+        public SlidingWindowRateLimiter(int limit, TimeSpan interval)
         {
-            _limit = limit ?? throw new ArgumentNullException(nameof(limit));
+            Limit = limit;
+            Interval = interval;
             _sem = new(1, 1);
             _times = new();
         }
+
+        public int Limit { get; }
+        public TimeSpan Interval { get; }
 
         private async Task EnterAsync(CancellationToken cancellationToken)
         {
             await _sem.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (_times.Count >= _limit.Count)
+                if (_times.Count >= Limit)
                 {
-                    var delay = _limit.Interval - (DateTimeOffset.Now - _times.Peek());
+                    var delay = Interval - (DateTimeOffset.Now - _times.Peek());
                     if (delay > TimeSpan.Zero)
                         await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
 

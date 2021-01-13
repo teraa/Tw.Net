@@ -40,7 +40,7 @@ namespace Twitch.Irc
 
         public bool RequestMembershipCapability { get; init; } = false;
 
-        public Func<LimitInfo, IRateLimiter> RateLimiterProvider { get; init; } = l => new SlidingWindowRateLimiter(l);
+        public Func<LimitInfo, IRateLimiter> RateLimiterProvider { get; init; } = i => new SlidingWindowRateLimiter(i.Limit, i.Interval);
 
         public LimitInfo JoinLimit { get; init; } = new LimitInfo(20, TimeSpan.FromSeconds(10));
 

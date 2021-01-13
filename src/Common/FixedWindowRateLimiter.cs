@@ -8,24 +8,27 @@ namespace Twitch
 {
     public class FixedWindowRateLimiter : IRateLimiter, IDisposable
     {
-        private readonly LimitInfo _limit;
         private readonly SemaphoreSlim _sem;
         private readonly Timer _timer;
         private int _done;
         private bool _disposedValue;
 
-        public FixedWindowRateLimiter(LimitInfo limit)
+        public FixedWindowRateLimiter(int limit, TimeSpan interval)
         {
-            _limit = limit ?? throw new ArgumentNullException(nameof(limit));
-            _sem = new(_limit.Count, _limit.Count);
+            Limit = limit;
+            Interval = interval;
+            _sem = new(Limit, Limit);
             _timer = new()
             {
                 AutoReset = false,
-                Interval = _limit.Interval.TotalMilliseconds
+                Interval = Interval.TotalMilliseconds
             };
             _timer.Elapsed += Refill;
             _done = 0;
         }
+
+        public int Limit { get; }
+        public TimeSpan Interval { get; }
 
         private void Refill(object sender, ElapsedEventArgs e)
         {
