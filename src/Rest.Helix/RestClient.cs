@@ -120,19 +120,18 @@ namespace Twitch.Rest.Helix
             if (response.IsSuccessStatusCode)
                 return await response.Content.ReadFromJsonAsync<TResponse>(s_options, cancellationToken).ConfigureAwait(false);
 
+            string? errorReason = null;
             try
             {
                 var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>(s_options, cancellationToken).ConfigureAwait(false);
-                var reason = errorResponse?.Message;
-                if (reason is null)
-                    throw new HttpException(response.StatusCode);
-                else
-                    throw new HttpException(response.StatusCode, reason);
+                errorReason = errorResponse?.Message;
             }
             catch
             {
                 throw new HttpException(response.StatusCode);
             }
+
+            throw new HttpException(response.StatusCode, errorReason);
         }
 
         protected virtual void Dispose(bool disposing)
