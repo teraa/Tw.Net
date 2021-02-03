@@ -56,9 +56,9 @@ namespace Twitch.Irc
             };
 
             if (limiter is null)
-                await SendRawAsync(raw).ConfigureAwait(false);
+                await SendRawAsync(raw, cancellationToken).ConfigureAwait(false);
             else
-                await limiter.Perform(() => SendRawAsync(raw), cancellationToken).ConfigureAwait(false);
+                await limiter.Perform(() => SendRawAsync(raw, cancellationToken), cancellationToken).ConfigureAwait(false);
 
             await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
         }

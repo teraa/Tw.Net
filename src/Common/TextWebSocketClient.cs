@@ -11,6 +11,7 @@ namespace Twitch
     {
         private readonly Uri _uri;
         private readonly Encoding _encoding;
+        private readonly SemaphoreSlim _connectSem;
         private readonly Memory<byte> _sbuf;
         private readonly Memory<byte> _rbuf;
         private ClientWebSocket? _client;
@@ -22,23 +23,33 @@ namespace Twitch
         {
             _uri = uri ?? throw new ArgumentNullException(nameof(uri));
             _encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
+            _connectSem = new SemaphoreSlim(1, 1);
             _sbuf = new Memory<byte>(new byte[4096]);
             _rbuf = new Memory<byte>(new byte[4096]);
         }
 
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
-            _client = new ClientWebSocket();
-            await _client.ConnectAsync(_uri, cancellationToken).ConfigureAwait(false);
+            await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                _client = new ClientWebSocket();
+                await _client.ConnectAsync(_uri, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _connectSem.Release();
+            }
         }
 
-        public async void Disconnect()
+        public async Task DisconnectAsync(CancellationToken cancellationToken)
         {
+            await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 if (_client is ClientWebSocket client)
                 {
-                    await client.CloseAsync(WebSocketCloseStatus.NormalClosure, default, default).ConfigureAwait(false);
+                    await client.CloseAsync(WebSocketCloseStatus.NormalClosure, null, cancellationToken).ConfigureAwait(false);
                     client.Dispose();
                 }
 
@@ -51,6 +62,10 @@ namespace Twitch
                 _ms = null;
             }
             catch { }
+            finally
+            {
+                _connectSem.Release();
+            }
         }
 
         public async Task<string?> ReadAsync(CancellationToken cancellationToken = default)
@@ -89,7 +104,7 @@ namespace Twitch
             return result;
         }
 
-        public async Task SendAsync(string message)
+        public async Task SendAsync(string message, CancellationToken cancellationToken)
         {
             if (message is null)
                 throw new ArgumentNullException(nameof(message));
@@ -110,7 +125,7 @@ namespace Twitch
                 bytes = _encoding.GetBytes(message).AsMemory();
             }
 
-            await _client.SendAsync(bytes, WebSocketMessageType.Text, true, CancellationToken.None).ConfigureAwait(false);
+            await _client.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken).ConfigureAwait(false);
         }
 
         private void Dispose(bool disposing)

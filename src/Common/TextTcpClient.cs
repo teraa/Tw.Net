@@ -14,6 +14,7 @@ namespace Twitch
         private readonly ushort _port;
         private readonly bool _ssl;
         private readonly Encoding _encoding;
+        private readonly SemaphoreSlim _connectSem;
         private TcpClient? _client;
         private Stream? _stream;
         private StreamReader? _sr;
@@ -26,27 +27,41 @@ namespace Twitch
             _port = port;
             _ssl = ssl;
             _encoding = encoding ?? throw new ArgumentNullException(nameof(encoding));
+            _connectSem = new SemaphoreSlim(1, 1);
         }
 
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
-            _client = new TcpClient();
-            await _client.ConnectAsync(_hostname, _port, cancellationToken).ConfigureAwait(false);
-
-            _stream = _client.GetStream();
-            if (_ssl)
+            await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                var stream = new SslStream(_stream, false);
-                await stream.AuthenticateAsClientAsync(_hostname).ConfigureAwait(false);
-                _stream = stream;
-            }
+                _client = new TcpClient();
+                await _client.ConnectAsync(_hostname, _port, cancellationToken).ConfigureAwait(false);
 
-            _sr = new StreamReader(_stream, _encoding);
-            _sw = new StreamWriter(_stream, _encoding);
+                _stream = _client.GetStream();
+                if (_ssl)
+                {
+                    var stream = new SslStream(_stream, false);
+                    var sslOptions = new SslClientAuthenticationOptions
+                    {
+                        TargetHost = _hostname
+                    };
+                    await stream.AuthenticateAsClientAsync(sslOptions, cancellationToken).ConfigureAwait(false);
+                    _stream = stream;
+                }
+
+                _sr = new StreamReader(_stream, _encoding);
+                _sw = new StreamWriter(_stream, _encoding);
+            }
+            finally
+            {
+                _connectSem.Release();
+            }
         }
 
-        public void Disconnect()
+        public async Task DisconnectAsync(CancellationToken cancellationToken)
         {
+            await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
                 _client?.Dispose();
@@ -57,6 +72,10 @@ namespace Twitch
                 _sw = null;
             }
             catch { }
+            finally
+            {
+                _connectSem.Release();
+            }
         }
 
         public async Task<string?> ReadAsync(CancellationToken cancellationToken = default)
@@ -74,14 +93,14 @@ namespace Twitch
             return await readTask.ConfigureAwait(false);
         }
 
-        public async Task SendAsync(string message)
+        public async Task SendAsync(string message, CancellationToken cancellationToken)
         {
             if (message is null)
                 throw new ArgumentNullException(nameof(message));
             if (_sw is null)
                 throw new InvalidOperationException("Cannot send while disconnected.");
 
-            await _sw.WriteLineAsync(message).ConfigureAwait(false);
+            await _sw.WriteLineAsync(message.AsMemory(), cancellationToken).ConfigureAwait(false);
             await _sw.FlushAsync().ConfigureAwait(false);
         }
 

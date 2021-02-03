@@ -34,9 +34,9 @@ namespace Twitch
         public event Func<string, Task>? RawMessageReceived;
         #endregion events
 
-        public async Task SendRawAsync(string message)
+        public async Task SendRawAsync(string message, CancellationToken cancellationToken = default)
         {
-            await _client.SendAsync(message).ConfigureAwait(false);
+            await _client.SendAsync(message, cancellationToken).ConfigureAwait(false);
             await _eventInvoker.InvokeAsync(RawMessageSent, nameof(RawMessageSent), message).ConfigureAwait(false);
         }
 
@@ -134,7 +134,7 @@ namespace Twitch
         private async Task HandleDisconnectAsync()
         {
             await DisconnectInternalAsync().ConfigureAwait(false);
-            _client.Disconnect();
+            await _client.DisconnectAsync(CancellationToken.None).ConfigureAwait(false);
 
             _logger?.LogInformation("Disconnected");
             await _eventInvoker.InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);

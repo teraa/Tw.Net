@@ -6,8 +6,8 @@ namespace Twitch
     public interface ISocketClient
     {
         Task ConnectAsync(CancellationToken cancellationToken);
-        void Disconnect();
-        Task SendAsync(string message);
+        Task DisconnectAsync(CancellationToken cancellationToken);
+        Task SendAsync(string message, CancellationToken cancellationToken);
         Task<string?> ReadAsync(CancellationToken cancellationToken);
     }
 }

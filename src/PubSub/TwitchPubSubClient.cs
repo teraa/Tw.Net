@@ -31,10 +31,10 @@ namespace Twitch.PubSub
         public event Func<Topic, ModeratorAction, Task>? ModeratorActionReceived;
         #endregion events
 
-        public async Task SendAsync(PubSubMessage message)
+        public async Task SendAsync(PubSubMessage message, CancellationToken cancellationToken)
         {
             var raw = PubSubParser.ToJson(message);
-            await SendRawAsync(raw).ConfigureAwait(false);
+            await SendRawAsync(raw, cancellationToken).ConfigureAwait(false);
             await _eventInvoker.InvokeAsync(PubSubMessageSent, nameof(PubSubMessageSent), message).ConfigureAwait(false);
         }
 
@@ -54,7 +54,7 @@ namespace Twitch.PubSub
                 Nonce = Guid.NewGuid().ToString()
             };
 
-            await SendAsync(message).ConfigureAwait(false);
+            await SendAsync(message, cancellationToken).ConfigureAwait(false);
             var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
                 _options.ResponseTimeout, cancellationToken).ConfigureAwait(false);
 
@@ -75,7 +75,7 @@ namespace Twitch.PubSub
                 Nonce = Guid.NewGuid().ToString()
             };
 
-            await SendAsync(message).ConfigureAwait(false);
+            await SendAsync(message, cancellationToken).ConfigureAwait(false);
             var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
                 _options.ResponseTimeout, cancellationToken).ConfigureAwait(false);
 
@@ -180,10 +180,10 @@ namespace Twitch.PubSub
                     Type = PubSubMessage.MessageType.PING
                 };
 
-                await SendAsync(request).ConfigureAwait(false);
-
                 if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
                     return;
+
+                await SendAsync(request, cancellationToken).ConfigureAwait(false);
 
                 var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.PONG,
                     _options.PongTimeout, cancellationToken).ConfigureAwait(false);
