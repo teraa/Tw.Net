@@ -31,7 +31,7 @@ namespace Twitch.PubSub
         public event Func<Topic, ModeratorAction, Task>? ModeratorActionReceived;
         #endregion events
 
-        public async Task SendAsync(PubSubMessage message, CancellationToken cancellationToken)
+        public async Task SendAsync(PubSubMessage message, CancellationToken cancellationToken = default)
         {
             var raw = PubSubParser.ToJson(message);
             await SendRawAsync(raw, cancellationToken).ConfigureAwait(false);
