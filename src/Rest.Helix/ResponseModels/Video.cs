@@ -21,6 +21,12 @@ namespace Twitch.Rest.Helix
         public string UserId { get; init; }
 
         /// <summary>
+        ///     Login username of the user who owns the video.
+        /// </summary>
+        [JsonPropertyName("user_login")]
+        public string UserLogin { get; init; }
+
+        /// <summary>
         ///     Display name of the user who owns the video.
         /// </summary>
         [JsonPropertyName("user_name")]
