@@ -36,9 +36,8 @@ namespace Twitch.Irc
         // TODO: cancel token arg?
         public event Func<ValueTask>? Connected;
         public event Func<ValueTask>? Disconnected;
+        // TODO: is this needed?
         public event Func<ValueTask>? Ready;
-        public event Func<string, ValueTask>? RawMessageSent;
-        public event Func<string, ValueTask>? RawMessageReceived;
         public event Func<IrcMessage, ValueTask>? IrcMessageSent;
         public event Func<IrcMessage, ValueTask>? IrcMessageReceived;
         #endregion
@@ -85,7 +84,7 @@ namespace Twitch.Irc
         public async Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
             _pingTimer.Enabled = false;
-            // TODO: Cancel stoppingtoken
+            // TODO: cancel token?
             await _socket.CloseAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Disconnected.");
@@ -247,14 +246,15 @@ namespace Twitch.Irc
                     Content = new(ts),
                 };
 
-                Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.PONG, Content: { } content } && content == request.Content;
                 // TODO: Token
-                var responseTask = GetNextMessageAsync(predicate, PongTimeout, default);
-
-                await SendAsync(request).ConfigureAwait(false);
-
                 // if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
                 //     return;
+                CancellationToken cancellationToken = default;
+
+                Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.PONG, Content: { } content } && content == request.Content;
+                var responseTask = GetNextMessageAsync(predicate, PongTimeout, cancellationToken);
+
+                await SendAsync(request, cancellationToken).ConfigureAwait(false);
 
                 var response = await responseTask.ConfigureAwait(false);
                 if (response is null)
