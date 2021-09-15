@@ -296,6 +296,8 @@ namespace Twitch.Irc
             // TODO
             (_socket as IDisposable)?.Dispose();
             _pingTimer.Dispose();
+            (JoinLimiter as IDisposable)?.Dispose();
+            (CommandLimiter as IDisposable)?.Dispose();
         }
     }
 }
