@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Twitch.Clients
 {
+    // TODO: unfinished
     public class SocketClient : ISocketClient
     {
         private readonly ILogger<SocketClient> _logger;

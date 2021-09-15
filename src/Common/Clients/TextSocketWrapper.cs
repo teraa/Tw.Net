@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Twitch.Clients
 {
+    // TODO: remove
     public class TextSocketWrapper
     {
         private readonly ISocketClient _client;

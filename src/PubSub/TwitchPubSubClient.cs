@@ -138,7 +138,8 @@ namespace Twitch.PubSub
         {
             if (buffer.Length == 0)
             {
-                _logger.LogWarning("Received empty message.");
+                // PONGs have 2x CRLF at the end.
+                // One is trimmed, second is interpreted as an empty message - ignore.
                 return;
             }
 
@@ -228,9 +229,6 @@ namespace Twitch.PubSub
                 _logger.LogWarning(ex, $"Exception executing {eventName} handler.");
             }
         }
-
-
-
 
         private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {

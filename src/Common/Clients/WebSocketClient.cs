@@ -8,7 +8,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Twitch.Clients
 {
-
     public class WebSocketClient : ISocketClient, IDisposable
     {
         private readonly ILogger<WebSocketClient> _logger;
