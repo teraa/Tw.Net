@@ -13,7 +13,7 @@ namespace Twitch.PubSub
     public class TwitchPubSubClient : IDisposable
     {
         private readonly ISocketClient _socket;
-        private ILogger<TwitchPubSubClient> _logger;
+        private readonly ILogger<TwitchPubSubClient> _logger;
         private readonly Timer _pingTimer;
 
         public TwitchPubSubClient(ISocketClient socket, ILogger<TwitchPubSubClient> logger)
