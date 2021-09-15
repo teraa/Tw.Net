@@ -14,7 +14,6 @@ namespace Twitch.Irc
 {
     public class TwitchIrcClient : IDisposable
     {
-        // TOOD: IDisposable?
         private readonly ISocketClient _socket;
         private readonly ILogger<TwitchIrcClient> _logger;
         private readonly Timer _pingTimer;
@@ -107,18 +106,22 @@ namespace Twitch.Irc
 
             var response = await responseTask.ConfigureAwait(false);
 
+            // TODO: Close when throw?
             switch (response)
             {
                 case null:
-                    _logger.LogWarning($"Login timed out after {LoginTimeout}.");
-                    // TODO: Close, throw?
-                    break;
+                {
+                    var message = $"Login timed out after {LoginTimeout}.";
+                    _logger.LogError(message);
+                    throw new TimeoutException(message);
+                }
 
                 case { Command: IrcCommand.NOTICE } notice:
-                    var error = notice.Content?.Text ?? "Login failed.";
-                    _logger.LogError(error);
-                    // TODO: Close, throw
-                    break;
+                {
+                    var message = notice.Content?.Text ?? "Login failed.";
+                    _logger.LogError(message);
+                    throw new AuthenticationException(message);
+                }
 
                 case { Command: IrcCommand.GLOBALUSERSTATE } state:
                     // TODO: Set state
