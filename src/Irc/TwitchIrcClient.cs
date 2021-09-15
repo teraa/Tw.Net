@@ -104,26 +104,30 @@ namespace Twitch.Irc
 
             await SendLoginAsync(nick: login, pass: "oauth:" + token, cancellationToken).ConfigureAwait(false);
 
-            var response = await responseTask.ConfigureAwait(false);
+            IrcMessage response;
+            try
+            {
+                response = await responseTask.ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                var message = $"Login timed out after {LoginTimeout}.";
+                _logger.LogError(message);
+                // TODO: Close when throw?
+                throw;
+            }
 
             // TODO: Close when throw?
-            switch (response)
+            switch (response.Command)
             {
-                case null:
+                case IrcCommand.NOTICE:
                 {
-                    var message = $"Login timed out after {LoginTimeout}.";
-                    _logger.LogError(message);
-                    throw new TimeoutException(message);
-                }
-
-                case { Command: IrcCommand.NOTICE } notice:
-                {
-                    var message = notice.Content?.Text ?? "Login failed.";
+                    var message = response.Content?.Text ?? "Login failed.";
                     _logger.LogError(message);
                     throw new AuthenticationException(message);
                 }
 
-                case { Command: IrcCommand.GLOBALUSERSTATE } state:
+                case IrcCommand.GLOBALUSERSTATE:
                     // TODO: Set state
                     break;
             }
