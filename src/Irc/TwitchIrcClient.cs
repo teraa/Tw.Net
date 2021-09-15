@@ -151,9 +151,9 @@ namespace Twitch.Irc
             {
                 await evt.Invoke().ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning($"Exception executing {eventName} handler.");
+                _logger.LogWarning(ex, $"Exception executing {eventName} handler.");
             }
         }
 
@@ -166,9 +166,9 @@ namespace Twitch.Irc
             {
                 await evt.Invoke(arg).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning($"Exception executing {eventName} handler.");
+                _logger.LogWarning(ex, $"Exception executing {eventName} handler.");
             }
         }
 

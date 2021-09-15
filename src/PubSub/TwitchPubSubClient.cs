@@ -193,9 +193,9 @@ namespace Twitch.PubSub
             {
                 await evt.Invoke().ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning($"Exception executing {eventName} handler.");
+                _logger.LogWarning(ex, $"Exception executing {eventName} handler.");
             }
         }
 
@@ -208,9 +208,9 @@ namespace Twitch.PubSub
             {
                 await evt.Invoke(arg).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning($"Exception executing {eventName} handler.");
+                _logger.LogWarning(ex, $"Exception executing {eventName} handler.");
             }
         }
 
@@ -223,9 +223,9 @@ namespace Twitch.PubSub
             {
                 await evt.Invoke(arg1, arg2).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                _logger.LogWarning($"Exception executing {eventName} handler.");
+                _logger.LogWarning(ex, $"Exception executing {eventName} handler.");
             }
         }
 
