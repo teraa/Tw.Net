@@ -100,7 +100,7 @@ namespace Twitch.Irc
             if (token is null) throw new ArgumentNullException(nameof(token));
 
             Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.GLOBALUSERSTATE or IrcCommand.NOTICE };
-            var responseTask = GetNextMessageAsync(predicate, LoginTimeout, cancellationToken);
+            var responseTask = IrcMessageReceived.GetResponseAsync(predicate, LoginTimeout, cancellationToken);
 
             await SendLoginAsync(nick: login, pass: "oauth:" + token, cancellationToken).ConfigureAwait(false);
 
@@ -205,34 +205,6 @@ namespace Twitch.Irc
             await SendAsync(nickMsg, cancellationToken).ConfigureAwait(false);
         }
 
-        private async ValueTask<IrcMessage?> GetNextMessageAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            var source = new TaskCompletionSource<IrcMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var sourceTask = source.Task;
-            Task winnerTask;
-            IrcMessageReceived += Handler;
-            try
-            {
-                winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false);
-            }
-            finally
-            {
-                IrcMessageReceived -= Handler;
-            }
-
-            return winnerTask == sourceTask
-                ? await sourceTask.ConfigureAwait(false)
-                : null;
-
-            ValueTask Handler(IrcMessage ircMessage)
-            {
-                if (predicate(ircMessage))
-                    source.TrySetResult(ircMessage);
-
-                return ValueTask.CompletedTask;
-            }
-        }
-
         private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {
 #if DEBUG
@@ -253,18 +225,18 @@ namespace Twitch.Irc
                 CancellationToken cancellationToken = default;
 
                 Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.PONG, Content: { } content } && content == request.Content;
-                var responseTask = GetNextMessageAsync(predicate, PongTimeout, cancellationToken);
+                var responseTask = IrcMessageReceived.GetResponseAsync(predicate, PongTimeout, cancellationToken);
 
                 await SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-                var response = await responseTask.ConfigureAwait(false);
-                if (response is null)
-                {
-                    _logger.LogWarning($"No PONG received within {PongTimeout}.");
-                    // _disconnectTokenSource?.Cancel();
-                }
+                await responseTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
+            catch (TimeoutException)
+            {
+                _logger.LogWarning($"No PONG received within {PongTimeout}.");
+                // _disconnectTokenSource?.Cancel();
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Exception in {nameof(PingTimerElapsed)}.");

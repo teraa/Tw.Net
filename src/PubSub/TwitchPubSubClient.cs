@@ -86,7 +86,7 @@ namespace Twitch.PubSub
             await InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
         }
 
-        public async Task<PubSubMessage?> ListenAsync(Topic topic, string token, CancellationToken cancellationToken = default)
+        public async Task<PubSubMessage> ListenAsync(Topic topic, string token, CancellationToken cancellationToken = default)
         {
             if (topic is null) throw new ArgumentNullException(nameof(topic));
             if (token is null) throw new ArgumentNullException(nameof(token));
@@ -103,7 +103,7 @@ namespace Twitch.PubSub
             };
 
             Func<PubSubMessage, bool> predicate = x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce;
-            var responseTask = GetNextMessageAsync(predicate, ResponseTimeout, cancellationToken);
+            var responseTask = PubSubMessageReceived.GetResponseAsync(predicate, ResponseTimeout, cancellationToken);
 
             await SendAsync(message, cancellationToken).ConfigureAwait(false);
             var response = await responseTask.ConfigureAwait(false);
@@ -111,7 +111,7 @@ namespace Twitch.PubSub
             return response;
         }
 
-        public async Task<PubSubMessage?> UnlistenAsync(Topic topic, CancellationToken cancellationToken = default)
+        public async Task<PubSubMessage> UnlistenAsync(Topic topic, CancellationToken cancellationToken = default)
         {
             if (topic is null) throw new ArgumentNullException(nameof(topic));
 
@@ -126,7 +126,7 @@ namespace Twitch.PubSub
             };
 
             Func<PubSubMessage, bool> predicate = x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce;
-            var responseTask = GetNextMessageAsync(predicate, ResponseTimeout, cancellationToken);
+            var responseTask = PubSubMessageReceived.GetResponseAsync(predicate, ResponseTimeout, cancellationToken);
 
             await SendAsync(message, cancellationToken).ConfigureAwait(false);
             var response = await responseTask.ConfigureAwait(false);
@@ -229,33 +229,8 @@ namespace Twitch.PubSub
             }
         }
 
-        private async ValueTask<PubSubMessage?> GetNextMessageAsync(Func<PubSubMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
-        {
-            var source = new TaskCompletionSource<PubSubMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var sourceTask = source.Task;
-            Task winnerTask;
-            PubSubMessageReceived += Handler;
-            try
-            {
-                winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false);
-            }
-            finally
-            {
-                PubSubMessageReceived -= Handler;
-            }
 
-            return winnerTask == sourceTask
-                ? await sourceTask.ConfigureAwait(false)
-                : null;
 
-            ValueTask Handler(PubSubMessage message)
-            {
-                if (predicate(message))
-                    source.TrySetResult(message);
-
-                return ValueTask.CompletedTask;
-            }
-        }
 
         private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {
@@ -275,18 +250,18 @@ namespace Twitch.PubSub
                 CancellationToken cancellationToken = default;
 
                 Func<PubSubMessage, bool> predicate = x => x is { Type: PubSubMessage.MessageType.PONG };
-                var responseTask = GetNextMessageAsync(predicate, PongTimeout, cancellationToken);
+                var responseTask = PubSubMessageReceived.GetResponseAsync(predicate, PongTimeout, cancellationToken);
 
                 await SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-                var response = await responseTask.ConfigureAwait(false);
-                if (response is null)
-                {
-                    _logger.LogWarning($"No PONG received within {PongTimeout}.");
-                    // _disconnectTokenSource?.Cancel();
-                }
+                await responseTask.ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
+            catch (TimeoutException)
+            {
+                _logger.LogWarning($"No PONG received within {PongTimeout}.");
+                // _disconnectTokenSource?.Cancel();
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Exception in PING timer");
