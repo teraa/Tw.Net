@@ -1,41 +1,89 @@
 using Microsoft.Extensions.Logging;
 using System;
+using System.Buffers;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Twitch.Clients;
 using Timer = System.Timers.Timer;
 
 namespace Twitch.PubSub
 {
-    public class TwitchPubSubClient : PersistentSocketClient
+    public class TwitchPubSubClient : IDisposable
     {
-        private readonly TwitchPubSubOptions _options;
+        private readonly ISocketClient _socket;
+        private ILogger<TwitchPubSubClient> _logger;
         private readonly Timer _pingTimer;
-        private bool _disposedValue;
 
-        public TwitchPubSubClient(ILogger<TwitchPubSubClient>? logger = null)
-            : this(new(), logger) { }
-
-        public TwitchPubSubClient(TwitchPubSubOptions options, ILogger<TwitchPubSubClient>? logger = null)
-            : base(options, logger)
+        public TwitchPubSubClient(ISocketClient socket, ILogger<TwitchPubSubClient> logger)
         {
-            _options = options;
+            _socket = socket;
+            _logger = logger;
+
+            _socket.Received += SocketReceivedAsync;
+            _socket.ClosedUnexpectedly += SocketClosedUnexpectedlyAsync;
+
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
+
+            PubSubMessageReceived += HandlePubSubMessageAsync;
         }
 
         #region events
-        public event Func<PubSubMessage, Task>? PubSubMessageSent;
-        public event Func<PubSubMessage, Task>? PubSubMessageReceived;
-        public event Func<Topic, ModeratorAction, Task>? ModeratorActionReceived;
+        public event Func<ValueTask>? Connected;
+        public event Func<ValueTask>? Disconnected;
+        public event Func<PubSubMessage, ValueTask>? PubSubMessageSent;
+        public event Func<PubSubMessage, ValueTask>? PubSubMessageReceived;
+        public event Func<Topic, ModeratorAction, ValueTask>? ModeratorActionReceived;
         #endregion events
 
-        public async Task SendAsync(PubSubMessage message, CancellationToken cancellationToken = default)
+        #region props
+        public Encoding Encoding { get; set; } = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        public TimeSpan PingInterval { get; set; } = TimeSpan.FromMinutes(2);
+        public TimeSpan PongTimeout { get; set; } = TimeSpan.FromSeconds(5);
+        public TimeSpan ResponseTimeout { get; set; } = TimeSpan.FromSeconds(5);
+        #endregion
+
+        public async ValueTask SendAsync(PubSubMessage message, CancellationToken cancellationToken = default)
         {
-            var raw = PubSubParser.ToJson(message);
-            await SendRawAsync(raw, cancellationToken).ConfigureAwait(false);
-            await _eventInvoker.InvokeAsync(PubSubMessageSent, nameof(PubSubMessageSent), message).ConfigureAwait(false);
+            // TODO: deserialize to bytes
+            // TODO: Reuse buffer for sending
+
+            var rawMessage = PubSubParser.ToJson(message);
+            var bytes = Encoding.GetBytes(rawMessage);
+
+            await _socket.SendAsync(bytes, cancellationToken).ConfigureAwait(false);
+            await InvokeAsync(PubSubMessageSent, nameof(PubSubMessageSent), message).ConfigureAwait(false);
+        }
+
+        public async Task ConnectAsync(CancellationToken cancellationToken = default)
+        {
+            // TODO: close if cancelled
+
+            await _socket.ConnectAsync(cancellationToken).ConfigureAwait(false);
+
+            if (PingInterval > TimeSpan.Zero)
+            {
+                _pingTimer.Interval = PingInterval.TotalMilliseconds;
+                _pingTimer.Enabled = true;
+            }
+
+            _logger.LogInformation("Connected.");
+
+            await InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
+        }
+
+        public async Task DisconnectAsync(CancellationToken cancellationToken = default)
+        {
+            _pingTimer.Enabled = false;
+            // TODO: cancel token?
+            await _socket.CloseAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Disconnected.");
+
+            await InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
         }
 
         public async Task<PubSubMessage?> ListenAsync(Topic topic, string token, CancellationToken cancellationToken = default)
@@ -54,9 +102,11 @@ namespace Twitch.PubSub
                 Nonce = Guid.NewGuid().ToString()
             };
 
+            Func<PubSubMessage, bool> predicate = x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce;
+            var responseTask = GetNextMessageAsync(predicate, ResponseTimeout, cancellationToken);
+
             await SendAsync(message, cancellationToken).ConfigureAwait(false);
-            var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
-                _options.ResponseTimeout, cancellationToken).ConfigureAwait(false);
+            var response = await responseTask.ConfigureAwait(false);
 
             return response;
         }
@@ -75,50 +125,39 @@ namespace Twitch.PubSub
                 Nonce = Guid.NewGuid().ToString()
             };
 
+            Func<PubSubMessage, bool> predicate = x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce;
+            var responseTask = GetNextMessageAsync(predicate, ResponseTimeout, cancellationToken);
+
             await SendAsync(message, cancellationToken).ConfigureAwait(false);
-            var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce,
-                _options.ResponseTimeout, cancellationToken).ConfigureAwait(false);
+            var response = await responseTask.ConfigureAwait(false);
 
             return response;
         }
 
-        #region overrides
-        protected override Task ConnectInternalAsync(CancellationToken cancellationToken)
+        private async ValueTask SocketReceivedAsync(ReadOnlySequence<byte> buffer)
         {
-            if (_options.PingInterval > TimeSpan.Zero)
+            if (buffer.Length == 0)
             {
-                _pingTimer.Interval = _options.PingInterval.TotalMilliseconds;
-                _pingTimer.Enabled = true;
+                _logger.LogWarning("Received empty message.");
+                return;
             }
 
-            return Task.CompletedTask;
+            // TODO: optimize
+            var text = Encoding.GetString(buffer);
+            var message = PubSubParser.Parse<PubSubMessage>(text);
+
+            await InvokeAsync(PubSubMessageReceived, nameof(PubSubMessageReceived), message).ConfigureAwait(false);
         }
 
-        protected override Task DisconnectInternalAsync()
+        private async ValueTask SocketClosedUnexpectedlyAsync(Exception? exception)
         {
-            _pingTimer.Enabled = false;
-            return Task.CompletedTask;
+            // TODO: Token
+            // TODO: Delay
+            await ConnectAsync().ConfigureAwait(false);
         }
 
-        protected override async Task HandleRawMessageAsync(string rawMessage)
+        private async ValueTask HandlePubSubMessageAsync(PubSubMessage pubSubMessage)
         {
-            try
-            {
-                var pubSubMessage = PubSubParser.Parse<PubSubMessage>(rawMessage);
-                await HandlePubSubMessageAsync(rawMessage, pubSubMessage).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Exception thrown while parsing PubSub message: {rawMessage}");
-            }
-        }
-        #endregion overrides
-
-        private async Task HandlePubSubMessageAsync(string rawMessage, PubSubMessage pubSubMessage)
-        {
-            await _eventInvoker.InvokeAsync(PubSubMessageReceived, nameof(PubSubMessageReceived), pubSubMessage).ConfigureAwait(false);
-
-
             try
             {
                 if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
@@ -132,39 +171,89 @@ namespace Twitch.PubSub
                 switch (model)
                 {
                     case ModeratorAction m:
-                        await _eventInvoker.InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, m);
+                        await InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, m).ConfigureAwait(false);
                         break;
                     default:
-                        _logger?.LogWarning($"Unhandled message: {rawMessage}");
+                        _logger.LogWarning($"Unhandled message: {PubSubParser.ToJson(pubSubMessage)}");
                         break;
                 }
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, $"Exception thrown while handling message: {rawMessage}");
+                _logger.LogError(ex, $"Exception thrown while handling message: {PubSubParser.ToJson(pubSubMessage)}");
             }
         }
 
-        // TODO: duplicate code in IRC client
-        private async Task<PubSubMessage?> GetNextMessageAsync(Func<PubSubMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
+        private async ValueTask InvokeAsync(Func<ValueTask>? @event, string eventName)
+        {
+            var evt = @event;
+            if (evt is null) return;
+
+            try
+            {
+                await evt.Invoke().ConfigureAwait(false);
+            }
+            catch
+            {
+                _logger.LogWarning($"Exception executing {eventName} handler.");
+            }
+        }
+
+        private async ValueTask InvokeAsync<T>(Func<T, ValueTask>? @event, string eventName, T arg)
+        {
+            var evt = @event;
+            if (evt is null) return;
+
+            try
+            {
+                await evt.Invoke(arg).ConfigureAwait(false);
+            }
+            catch
+            {
+                _logger.LogWarning($"Exception executing {eventName} handler.");
+            }
+        }
+
+        private async ValueTask InvokeAsync<T1, T2>(Func<T1, T2, ValueTask>? @event, string eventName, T1 arg1, T2 arg2)
+        {
+            var evt = @event;
+            if (evt is null) return;
+
+            try
+            {
+                await evt.Invoke(arg1, arg2).ConfigureAwait(false);
+            }
+            catch
+            {
+                _logger.LogWarning($"Exception executing {eventName} handler.");
+            }
+        }
+
+        private async ValueTask<PubSubMessage?> GetNextMessageAsync(Func<PubSubMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
         {
             var source = new TaskCompletionSource<PubSubMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             var sourceTask = source.Task;
             Task winnerTask;
             PubSubMessageReceived += Handler;
-            try { winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false); }
-            finally { PubSubMessageReceived -= Handler; }
+            try
+            {
+                winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false);
+            }
+            finally
+            {
+                PubSubMessageReceived -= Handler;
+            }
 
             return winnerTask == sourceTask
                 ? await sourceTask.ConfigureAwait(false)
                 : null;
 
-            Task Handler(PubSubMessage PubSubMessage)
+            ValueTask Handler(PubSubMessage message)
             {
-                if (predicate(PubSubMessage))
-                    source.TrySetResult(PubSubMessage);
+                if (predicate(message))
+                    source.TrySetResult(message);
 
-                return Task.CompletedTask;
+                return ValueTask.CompletedTask;
             }
         }
 
@@ -180,44 +269,38 @@ namespace Twitch.PubSub
                     Type = PubSubMessage.MessageType.PING
                 };
 
-                if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
-                    return;
+                // TODO: Token
+                // if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
+                //     return;
+                CancellationToken cancellationToken = default;
+
+                Func<PubSubMessage, bool> predicate = x => x is { Type: PubSubMessage.MessageType.PONG };
+                var responseTask = GetNextMessageAsync(predicate, PongTimeout, cancellationToken);
 
                 await SendAsync(request, cancellationToken).ConfigureAwait(false);
 
-                var response = await GetNextMessageAsync(x => x.Type == PubSubMessage.MessageType.PONG,
-                    _options.PongTimeout, cancellationToken).ConfigureAwait(false);
-
+                var response = await responseTask.ConfigureAwait(false);
                 if (response is null)
                 {
-                    _logger?.LogWarning($"No PONG received within {_options.PongTimeout}");
-                    _disconnectTokenSource?.Cancel();
+                    _logger.LogWarning($"No PONG received within {PongTimeout}.");
+                    // _disconnectTokenSource?.Cancel();
                 }
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Exception in PING timer");
+                _logger.LogError(ex, "Exception in PING timer");
             }
 #if DEBUG
             ((Timer)sender).Enabled = true;
 #endif
         }
 
-        ~TwitchPubSubClient() => Dispose(disposing: false);
-
-        protected override void Dispose(bool disposing)
+        public void Dispose()
         {
-            if (!_disposedValue)
-            {
-                if (disposing)
-                {
-                    try { _pingTimer.Dispose(); } catch { }
-                }
-
-                _disposedValue = true;
-
-                base.Dispose(disposing);
-            }
+            // TODO
+            (_socket as IDisposable)?.Dispose();
+            _pingTimer.Dispose();
         }
     }
 }
