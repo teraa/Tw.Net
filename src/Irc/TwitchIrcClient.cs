@@ -36,8 +36,6 @@ namespace Twitch.Irc
         // TODO: cancel token arg?
         public event Func<ValueTask>? Connected;
         public event Func<ValueTask>? Disconnected;
-        // TODO: is this needed?
-        public event Func<ValueTask>? Ready;
         public event Func<IrcMessage, ValueTask>? IrcMessageSent;
         public event Func<IrcMessage, ValueTask>? IrcMessageReceived;
         #endregion
