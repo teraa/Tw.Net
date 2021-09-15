@@ -45,18 +45,34 @@ namespace Twitch.Irc
         public TimeSpan PongTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public TimeSpan LoginTimeout { get; set; } = TimeSpan.FromSeconds(10);
         public List<string> Capabilities { get; } = new() { "twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership" };
+        public IRateLimiter JoinLimiter { get; set; } = new SlidingWindowRateLimiter(20, TimeSpan.FromSeconds(10));
+        public IRateLimiter CommandLimiter { get; set; } = new SlidingWindowRateLimiter(20, TimeSpan.FromSeconds(30));
         #endregion
 
         public async ValueTask SendAsync(IrcMessage message, CancellationToken cancellationToken = default)
         {
             // TODO: Deserialize IrcMessage to bytes
             // TODO: Reuse a buffer for sending
-            // TODO: Ratelimit per command type
 
             var rawMessage = message.ToString();
             var bytes = Encoding.GetBytes(rawMessage);
 
-            await _socket.SendAsync(bytes, cancellationToken).ConfigureAwait(false);
+            var limiter = message.Command switch
+            {
+                IrcCommand.JOIN => JoinLimiter,
+                IrcCommand.PRIVMSG => CommandLimiter,
+                _ => null,
+            };
+
+            if (limiter is null)
+            {
+                await _socket.SendAsync(bytes, cancellationToken).ConfigureAwait(false);
+            }
+            else
+            {
+                await limiter.Perform(() => _socket.SendAsync(bytes, cancellationToken), cancellationToken).ConfigureAwait(false);
+            }
+
             await InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
         }
 

@@ -56,6 +56,18 @@ namespace Twitch
             return await func().ConfigureAwait(false);
         }
 
+        public async ValueTask Perform(Func<ValueTask> func, CancellationToken cancellationToken = default)
+        {
+            await EnterAsync(cancellationToken).ConfigureAwait(false);
+            await func().ConfigureAwait(false);
+        }
+
+        public async ValueTask<T> Perform<T>(Func<ValueTask<T>> func, CancellationToken cancellationToken = default)
+        {
+            await EnterAsync(cancellationToken).ConfigureAwait(false);
+            return await func().ConfigureAwait(false);
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)

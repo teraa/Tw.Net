@@ -63,6 +63,34 @@ namespace Twitch
             }
         }
 
+        public async ValueTask Perform(Func<ValueTask> func, CancellationToken cancellationToken = default)
+        {
+            await _sem.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await func().ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Increment(ref _done);
+                _timer.Enabled = true;
+            }
+        }
+
+        public async ValueTask<T> Perform<T>(Func<ValueTask<T>> func, CancellationToken cancellationToken = default)
+        {
+            await _sem.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await func().ConfigureAwait(false);
+            }
+            finally
+            {
+                Interlocked.Increment(ref _done);
+                _timer.Enabled = true;
+            }
+        }
+
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposedValue)
