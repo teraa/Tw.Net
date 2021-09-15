@@ -95,7 +95,7 @@ namespace Twitch.Rest.Helix
             }
         }
 
-        public async Task<TResponse?> SendAsync<TResponse>(HttpMethod httpMethod, string endpoint, IRequestArgs? args, CancellationToken cancellationToken)
+        public async Task<TResponse> SendAsync<TResponse>(HttpMethod httpMethod, string endpoint, IRequestArgs? args, CancellationToken cancellationToken)
             where TResponse : class
         {
             var requestUri = endpoint;
@@ -118,7 +118,7 @@ namespace Twitch.Rest.Helix
 
 
             if (response.IsSuccessStatusCode)
-                return await response.Content.ReadFromJsonAsync<TResponse>(s_options, cancellationToken).ConfigureAwait(false);
+                return (await response.Content.ReadFromJsonAsync<TResponse>(s_options, cancellationToken).ConfigureAwait(false))!;
 
             string? errorReason = null;
             try

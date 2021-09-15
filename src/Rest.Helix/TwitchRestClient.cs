@@ -18,16 +18,16 @@ namespace Twitch.Rest.Helix
             _client = options.RestClientProvider(clientId, token);
         }
 
-        public Task<GetResponse<User>?> GetUsersAsync(GetUsersArgs args, CancellationToken cancellationToken = default)
+        public Task<GetResponse<User>> GetUsersAsync(GetUsersArgs args, CancellationToken cancellationToken = default)
              => GetAsync<User>("users", args, cancellationToken);
 
-        public Task<GetResponse<Video>?> GetVideosAsync(GetVideosArgs args, CancellationToken cancellationToken = default)
+        public Task<GetResponse<Video>> GetVideosAsync(GetVideosArgs args, CancellationToken cancellationToken = default)
             => GetAsync<Video>("videos", args, cancellationToken);
 
-        public Task<GetResponse<Follow>?> GetFollowsAsync(GetFollowsArgs args, CancellationToken cancellationToken = default)
+        public Task<GetResponse<Follow>> GetFollowsAsync(GetFollowsArgs args, CancellationToken cancellationToken = default)
             => GetAsync<Follow>("users/follows", args, cancellationToken);
 
-        private Task<GetResponse<T>?> GetAsync<T>(string endpoint, IRequestArgs args, CancellationToken cancellationToken)
+        private Task<GetResponse<T>> GetAsync<T>(string endpoint, IRequestArgs args, CancellationToken cancellationToken)
             => _client.SendAsync<GetResponse<T>>(HttpMethod.Get, endpoint, args, cancellationToken);
 
         public void Dispose()
