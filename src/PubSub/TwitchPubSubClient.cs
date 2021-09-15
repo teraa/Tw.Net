@@ -153,8 +153,33 @@ namespace Twitch.PubSub
         private async ValueTask SocketClosedUnexpectedlyAsync(Exception? exception)
         {
             // TODO: Token
-            // TODO: Delay
-            await ConnectAsync().ConfigureAwait(false);
+            CancellationToken cancellationToken = default;
+
+            int delay = 0;
+            while (true)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                    await ConnectAsync(cancellationToken).ConfigureAwait(false);
+                    break;
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    delay = delay switch
+                    {
+                        0 => 1,
+                        <= 64 => delay * 2,
+                        _ => delay,
+                    };
+
+                    _logger.LogError(ex, $"Exception while reconnecting.");
+                }
+            }
         }
 
         private async ValueTask HandlePubSubMessageAsync(PubSubMessage pubSubMessage)
