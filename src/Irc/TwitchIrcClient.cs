@@ -89,6 +89,8 @@ namespace Twitch.Irc
             await _socket.CloseAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Disconnected.");
+
+            await InvokeAsync(Disconnected, nameof(Disconnected)).ConfigureAwait(false);
         }
 
         public Task LoginAnonAsync(CancellationToken cancellationToken = default)
