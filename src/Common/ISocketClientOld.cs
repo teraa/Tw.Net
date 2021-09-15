@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    public interface ISocketClient
+    public interface ISocketClientOld
     {
         Task ConnectAsync(CancellationToken cancellationToken);
         Task DisconnectAsync(CancellationToken cancellationToken);

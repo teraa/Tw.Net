@@ -1,227 +1,233 @@
 using IrcMessageParser;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Security.Authentication;
+using System.Buffers;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Twitch.Clients;
 using Timer = System.Timers.Timer;
 
 namespace Twitch.Irc
 {
-    public class TwitchIrcClient : PersistentSocketClient
+    public class TwitchIrcClient : IDisposable
     {
-        internal const string AnonLoginPrefix = "justinfan";
-        internal const string AnonLogin = AnonLoginPrefix + "1";
-
-        private readonly TwitchIrcOptions _options;
+        // TOOD: IDisposable?
+        private readonly ISocketClient _socket;
+        private readonly ILogger<TwitchIrcClient> _logger;
         private readonly Timer _pingTimer;
-        private readonly IRateLimiter _joinLimiter, _commandLimiter;
-        private string? _login;
-        private string? _token;
-        private bool _disposedValue;
 
-        public TwitchIrcClient(ILogger<TwitchIrcClient>? logger = null)
-            : this(new(), logger) { }
-
-        public TwitchIrcClient(TwitchIrcOptions options, ILogger<TwitchIrcClient>? logger = null)
-            : base(options, logger)
+        public TwitchIrcClient(ISocketClient socket, ILogger<TwitchIrcClient> logger)
         {
-            _options = options;
+            _socket = socket;
+            _logger = logger;
+
+            _socket.Received += SocketReceivedAsync;
+            _socket.ClosedUnexpectedly += SocketClosedUnexpectedlyAsync;
+
             _pingTimer = new Timer();
             _pingTimer.Elapsed += PingTimerElapsed;
             _pingTimer.AutoReset = true;
-            _joinLimiter = _options.RateLimiterProvider(_options.JoinLimit);
-            _commandLimiter = _options.RateLimiterProvider(_options.CommandLimit);
         }
 
         #region events
-        public event Func<Task>? Ready;
-        public event Func<IrcMessage, Task>? IrcMessageSent;
-        public event Func<IrcMessage, Task>? IrcMessageReceived;
-        #endregion events
+        // TODO: cancel token arg?
+        public event Func<ValueTask>? Connected;
+        public event Func<ValueTask>? Disconnected;
+        public event Func<ValueTask>? Ready;
+        public event Func<string, ValueTask>? RawMessageSent;
+        public event Func<string, ValueTask>? RawMessageReceived;
+        public event Func<IrcMessage, ValueTask>? IrcMessageSent;
+        public event Func<IrcMessage, ValueTask>? IrcMessageReceived;
+        #endregion
 
-        private bool IsAnonLogin
-            => _login?.StartsWith(AnonLoginPrefix, StringComparison.OrdinalIgnoreCase) == true;
+        #region props
+        public Encoding Encoding { get; set; } = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+        public TimeSpan PingInterval { get; set; } = TimeSpan.FromMinutes(2);
+        public TimeSpan PongTimeout { get; set; } = TimeSpan.FromSeconds(5);
+        public TimeSpan LoginTimeout { get; set; } = TimeSpan.FromSeconds(10);
+        public List<string> Capabilities { get; } = new() { "twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership" };
+        #endregion
 
-        public async Task SendAsync(IrcMessage message, CancellationToken cancellationToken = default)
+        public async ValueTask SendAsync(IrcMessage message, CancellationToken cancellationToken = default)
         {
-            var raw = message.ToString();
+            // TODO: Deserialize IrcMessage to bytes
+            // TODO: Reuse a buffer for sending
+            // TODO: Ratelimit per command type
 
-            var limiter = message.Command switch
+            var rawMessage = message.ToString();
+            var bytes = Encoding.GetBytes(rawMessage);
+
+            await _socket.SendAsync(bytes, cancellationToken).ConfigureAwait(false);
+            await InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
+        }
+
+        public async Task ConnectAsync(CancellationToken cancellationToken = default)
+        {
+            // TODO: close if cancelled
+
+            await _socket.ConnectAsync(cancellationToken).ConfigureAwait(false);
+            await SendCapabilitiesAsync(cancellationToken).ConfigureAwait(false);
+
+            if (PingInterval > TimeSpan.Zero)
             {
-                IrcCommand.JOIN => _joinLimiter,
-                IrcCommand.PRIVMSG => _commandLimiter,
-                _ => null
-            };
-
-            if (limiter is null)
-                await SendRawAsync(raw, cancellationToken).ConfigureAwait(false);
-            else
-                await limiter.Perform(() => SendRawAsync(raw, cancellationToken), cancellationToken).ConfigureAwait(false);
-
-            await _eventInvoker.InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
-        }
-
-        public override Task ConnectAsync(CancellationToken cancellationToken = default)
-        {
-            return ConnectAsync(AnonLogin, "", cancellationToken);
-        }
-        public Task ConnectAsync(string login, string token, CancellationToken cancellationToken = default)
-        {
-            _login = login ?? throw new ArgumentNullException(nameof(login));
-            _token = token ?? throw new ArgumentNullException(nameof(token));
-            return base.ConnectAsync(cancellationToken);
-        }
-
-        #region overrides
-        protected override async Task ConnectInternalAsync(CancellationToken cancellationToken)
-        {
-            await RequestCapabilitiesAsync().ConfigureAwait(false);
-
-            if (!await LoginAsync(cancellationToken).ConfigureAwait(false))
-                return;
-
-            if (_options.PingInterval > TimeSpan.Zero)
-            {
-                _pingTimer.Interval = _options.PingInterval.TotalMilliseconds;
+                _pingTimer.Interval = PingInterval.TotalMilliseconds;
                 _pingTimer.Enabled = true;
             }
 
-            await _eventInvoker.InvokeAsync(Ready, nameof(Ready)).ConfigureAwait(false);
+            _logger.LogInformation("Connected.");
+
+            await InvokeAsync(Connected, nameof(Connected)).ConfigureAwait(false);
         }
 
-        protected override Task ReconnectInternalAsync()
-        {
-            return ConnectAsync(_login!, _token!);
-        }
-
-        protected override Task DisconnectInternalAsync()
+        public async Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
             _pingTimer.Enabled = false;
-            return Task.CompletedTask;
+            // TODO: Cancel stoppingtoken
+            await _socket.CloseAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Disconnected.");
         }
 
-        protected override async Task HandleRawMessageAsync(string rawMessage)
+        public Task LoginAnonAsync(CancellationToken cancellationToken = default)
         {
+            return SendLoginAsync("justinfan1", "", cancellationToken);
+        }
+
+        public async Task LoginAsync(string login, string token, CancellationToken cancellationToken = default)
+        {
+            if (login is null) throw new ArgumentNullException(nameof(login));
+            if (token is null) throw new ArgumentNullException(nameof(token));
+
+            Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.GLOBALUSERSTATE or IrcCommand.NOTICE };
+            var responseTask = GetNextMessageAsync(predicate, LoginTimeout, cancellationToken);
+
+            await SendLoginAsync(nick: login, pass: "oauth:" + token, cancellationToken).ConfigureAwait(false);
+
+            var response = await responseTask.ConfigureAwait(false);
+
+            switch (response)
+            {
+                case null:
+                    _logger.LogWarning($"Login timed out after {LoginTimeout}.");
+                    // TODO: Close, throw?
+                    break;
+
+                case { Command: IrcCommand.NOTICE } notice:
+                    var error = notice.Content?.Text ?? "Login failed.";
+                    _logger.LogError(error);
+                    // TODO: Close, throw
+                    break;
+
+                case { Command: IrcCommand.GLOBALUSERSTATE } state:
+                    // TODO: Set state
+                    break;
+            }
+        }
+
+        private async ValueTask SocketReceivedAsync(ReadOnlySequence<byte> buffer)
+        {
+            // TODO: optimize
+            var text = Encoding.GetString(buffer);
+            var message = IrcMessage.Parse(text);
+
+            await InvokeAsync(IrcMessageReceived, nameof(IrcMessageReceived), message).ConfigureAwait(false);
+        }
+
+        private async ValueTask SocketClosedUnexpectedlyAsync(Exception? exception)
+        {
+            // TODO: Token
+            // TODO: Delay
+            await ConnectAsync().ConfigureAwait(false);
+        }
+
+        private async ValueTask InvokeAsync(Func<ValueTask>? @event, string eventName)
+        {
+            var evt = @event;
+            if (evt is null) return;
+
             try
             {
-                var ircMessage = IrcMessage.Parse(rawMessage);
-                await HandleIrcMessageAsync(ircMessage).ConfigureAwait(false);
+                await evt.Invoke().ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch
             {
-                _logger?.LogError(ex, $"Exception thrown while parsing IRC message: {rawMessage}");
+                _logger.LogWarning($"Exception executing {eventName} handler.");
             }
         }
-        #endregion overrides
 
-        private async Task<IrcMessage?> GetNextMessageAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
+        private async ValueTask InvokeAsync<T>(Func<T, ValueTask>? @event, string eventName, T arg)
+        {
+            var evt = @event;
+            if (evt is null) return;
+
+            try
+            {
+                await evt.Invoke(arg).ConfigureAwait(false);
+            }
+            catch
+            {
+                _logger.LogWarning($"Exception executing {eventName} handler.");
+            }
+        }
+
+        private async Task SendCapabilitiesAsync(CancellationToken cancellationToken)
+        {
+            var message = new IrcMessage
+            {
+                Command = IrcCommand.CAP,
+                Arg = "REQ",
+                Content = new(string.Join(' ', Capabilities)),
+            };
+
+            await SendAsync(message, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async Task SendLoginAsync(string nick, string pass, CancellationToken cancellationToken)
+        {
+            var passMsg = new IrcMessage
+            {
+                Command = IrcCommand.PASS,
+                Content = new(pass),
+            };
+
+            var nickMsg = new IrcMessage
+            {
+                Command = IrcCommand.NICK,
+                Content = new(nick),
+            };
+
+            await SendAsync(passMsg, cancellationToken).ConfigureAwait(false);
+            await SendAsync(nickMsg, cancellationToken).ConfigureAwait(false);
+        }
+
+        private async ValueTask<IrcMessage?> GetNextMessageAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
         {
             var source = new TaskCompletionSource<IrcMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
             var sourceTask = source.Task;
             Task winnerTask;
             IrcMessageReceived += Handler;
-            try { winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false); }
-            finally { IrcMessageReceived -= Handler; }
+            try
+            {
+                winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false);
+            }
+            finally
+            {
+                IrcMessageReceived -= Handler;
+            }
 
             return winnerTask == sourceTask
                 ? await sourceTask.ConfigureAwait(false)
                 : null;
 
-            Task Handler(IrcMessage ircMessage)
+            ValueTask Handler(IrcMessage ircMessage)
             {
                 if (predicate(ircMessage))
                     source.TrySetResult(ircMessage);
 
-                return Task.CompletedTask;
-            }
-        }
-
-        private async Task RequestCapabilitiesAsync()
-        {
-            var caps = "twitch.tv/tags twitch.tv/commands";
-            if (_options.RequestMembershipCapability)
-                caps += " twitch.tv/membership";
-
-            var capReq = new IrcMessage
-            {
-                Command = IrcCommand.CAP,
-                Arg = "REQ",
-                Content = new(caps)
-            };
-
-            await SendAsync(capReq).ConfigureAwait(false);
-        }
-
-        private async Task<bool> LoginAsync(CancellationToken cancellationToken)
-        {
-            var passReq = new IrcMessage
-            {
-                Command = IrcCommand.PASS,
-                Content = new("oauth:" + _token)
-            };
-            await SendAsync(passReq, cancellationToken).ConfigureAwait(false);
-
-            var nickReq = new IrcMessage
-            {
-                Command = IrcCommand.NICK,
-                Content = new(_login!)
-            };
-            await SendAsync(nickReq, cancellationToken).ConfigureAwait(false);
-
-            if (!IsAnonLogin)
-            {
-                Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.GLOBALUSERSTATE or IrcCommand.NOTICE };
-                var response = await GetNextMessageAsync(predicate, _options.LoginTimeout, cancellationToken).ConfigureAwait(false);
-
-                if (response is null)
-                {
-                    _logger?.LogWarning("Login timed out after " + _options.LoginTimeout.ToString());
-                    _disconnectTokenSource?.Cancel();
-                    return false;
-                }
-                else if (response.Command == IrcCommand.NOTICE)
-                {
-                    throw new AuthenticationException(response.Content?.Text ?? "Login failed");
-                }
-                else
-                {
-                    // TODO: Set GLOBALUSERSTATE data
-                }
-            }
-
-            return true;
-        }
-
-        private async Task HandleIrcMessageAsync(IrcMessage ircMessage)
-        {
-            await _eventInvoker.InvokeAsync(IrcMessageReceived, nameof(IrcMessageReceived), ircMessage).ConfigureAwait(false);
-
-            try
-            {
-                switch (ircMessage.Command)
-                {
-                    case IrcCommand.PING:
-                        var pingResponse = new IrcMessage
-                        {
-                            Command = IrcCommand.PONG,
-                            Content = ircMessage.Content
-                        };
-                        await SendAsync(pingResponse).ConfigureAwait(false);
-                        break;
-
-                    // TODO
-                    case IrcCommand.PRIVMSG:
-                        break;
-
-                    case IrcCommand.USERNOTICE:
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, $"Exception thrown while handling message: {ircMessage}");
+                return ValueTask.CompletedTask;
             }
         }
 
@@ -232,53 +238,44 @@ namespace Twitch.Irc
 #endif
             try
             {
-                var text = DateTimeOffset.UtcNow.ToString("u");
+                var ts = DateTimeOffset.UtcNow.ToString("u");
                 var request = new IrcMessage
                 {
                     Command = IrcCommand.PING,
-                    Content = new(text)
+                    Content = new(ts),
                 };
+
+                Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.PONG, Content: { } content } && content == request.Content;
+                // TODO: Token
+                var responseTask = GetNextMessageAsync(predicate, PongTimeout, default);
 
                 await SendAsync(request).ConfigureAwait(false);
 
-                if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
-                    return;
+                // if (_disconnectTokenSource?.Token is not CancellationToken cancellationToken)
+                //     return;
 
-                var response = await GetNextMessageAsync(x => x.Command == IrcCommand.PONG && x.Content?.Text == text,
-                    _options.PongTimeout, cancellationToken).ConfigureAwait(false);
-
+                var response = await responseTask.ConfigureAwait(false);
                 if (response is null)
                 {
-                    _logger?.LogWarning($"No PONG received within {_options.PongTimeout}");
-                    _disconnectTokenSource?.Cancel();
+                    _logger.LogWarning($"No PONG received within {PongTimeout}.");
+                    // _disconnectTokenSource?.Cancel();
                 }
             }
+            catch (OperationCanceledException) { }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Exception in PING timer");
+                _logger.LogError(ex, $"Exception in {nameof(PingTimerElapsed)}.");
             }
 #if DEBUG
             ((Timer)sender).Enabled = true;
 #endif
         }
 
-        ~TwitchIrcClient() => Dispose(disposing: false);
-
-        protected override void Dispose(bool disposing)
+        public void Dispose()
         {
-            if (!_disposedValue)
-            {
-                if (disposing)
-                {
-                    try { _pingTimer.Dispose(); } catch { }
-                    try { (_joinLimiter as IDisposable)?.Dispose(); } catch { }
-                    try { (_commandLimiter as IDisposable)?.Dispose(); } catch { }
-                }
-
-                _disposedValue = true;
-
-                base.Dispose(disposing);
-            }
+            // TODO
+            (_socket as IDisposable)?.Dispose();
+            _pingTimer.Dispose();
         }
     }
 }

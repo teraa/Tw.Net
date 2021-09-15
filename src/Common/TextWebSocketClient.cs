@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Twitch
 {
-    public sealed class TextWebSocketClient : ISocketClient, IDisposable
+    public sealed class TextWebSocketClient : ISocketClientOld, IDisposable
     {
         private readonly Uri _uri;
         private readonly Encoding _encoding;

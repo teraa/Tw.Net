@@ -6,7 +6,7 @@ namespace Twitch
     {
         private readonly TimeSpan _handlerWarningTimeout = TimeSpan.FromSeconds(2);
 
-        public Func<ISocketClient> SocketClientProvider { get; init; } = null!;
+        public Func<ISocketClientOld> SocketClientProvider { get; init; } = null!;
 
         public TimeSpan HandlerWarningTimeout
         {

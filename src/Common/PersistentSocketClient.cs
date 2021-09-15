@@ -10,7 +10,7 @@ namespace Twitch
         protected readonly AsyncEventInvoker _eventInvoker;
         protected readonly ILogger? _logger;
         protected CancellationTokenSource? _stoppingTokenSource, _disconnectTokenSource;
-        private readonly ISocketClient _client;
+        private readonly ISocketClientOld _client;
         private readonly PersistentSocketOptions _options;
         private readonly SemaphoreSlim _connectSem;
         private Task? _listenerTask;
