@@ -31,6 +31,9 @@ namespace Twitch.PubSub
             PubSubMessageReceived += HandlePubSubMessageAsync;
         }
 
+        public TwitchPubSubClient(ISocketClient socket, ILoggerFactory loggerFactory)
+            : this(socket, loggerFactory.CreateLogger<TwitchPubSubClient>()) { }
+
         #region events
         public event Func<ValueTask>? Connected;
         public event Func<ValueTask>? Disconnected;

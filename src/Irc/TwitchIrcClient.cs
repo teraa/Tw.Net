@@ -31,6 +31,9 @@ namespace Twitch.Irc
             _pingTimer.AutoReset = true;
         }
 
+        public TwitchIrcClient(ISocketClient socket, ILoggerFactory loggerFactory)
+            : this(socket, loggerFactory.CreateLogger<TwitchIrcClient>()) { }
+
         #region events
         // TODO: cancel token arg?
         public event Func<ValueTask>? Connected;
@@ -116,7 +119,7 @@ namespace Twitch.Irc
             if (token is null) throw new ArgumentNullException(nameof(token));
 
             Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.GLOBALUSERSTATE or IrcCommand.NOTICE };
-            var responseTask = IrcMessageReceived.GetResponseAsync(predicate, LoginTimeout, cancellationToken);
+            var responseTask = GetResponseAsync(predicate, LoginTimeout, cancellationToken);
 
             await SendLoginAsync(nick: login, pass: "oauth:" + token, cancellationToken).ConfigureAwait(false);
 
