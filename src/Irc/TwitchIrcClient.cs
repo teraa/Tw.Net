@@ -250,6 +250,35 @@ namespace Twitch.Irc
             await SendAsync(nickMsg, cancellationToken).ConfigureAwait(false);
         }
 
+        private async ValueTask<IrcMessage> GetResponseAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var source = new TaskCompletionSource<IrcMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var sourceTask = source.Task;
+            Task winnerTask;
+            IrcMessageReceived += Handler;
+            try
+            {
+                winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false);
+            }
+            finally
+            {
+                IrcMessageReceived -= Handler;
+            }
+
+            if (winnerTask == sourceTask)
+                return await sourceTask.ConfigureAwait(false);
+
+            throw new TimeoutException($"Response not received within {timeout}.");
+
+            ValueTask Handler(IrcMessage message)
+            {
+                if (predicate(message))
+                    source.TrySetResult(message);
+
+                return ValueTask.CompletedTask;
+            }
+        }
+
         private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {
 #if DEBUG
@@ -270,7 +299,7 @@ namespace Twitch.Irc
                 CancellationToken cancellationToken = default;
 
                 Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.PONG, Content: { } content } && content == request.Content;
-                var responseTask = IrcMessageReceived.GetResponseAsync(predicate, PongTimeout, cancellationToken);
+                var responseTask = GetResponseAsync(predicate, PongTimeout, cancellationToken);
 
                 await SendAsync(request, cancellationToken).ConfigureAwait(false);
 

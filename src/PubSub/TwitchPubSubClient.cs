@@ -103,7 +103,7 @@ namespace Twitch.PubSub
             };
 
             Func<PubSubMessage, bool> predicate = x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce;
-            var responseTask = PubSubMessageReceived.GetResponseAsync(predicate, ResponseTimeout, cancellationToken);
+            var responseTask = GetResponseAsync(predicate, ResponseTimeout, cancellationToken);
 
             await SendAsync(message, cancellationToken).ConfigureAwait(false);
             var response = await responseTask.ConfigureAwait(false);
@@ -126,7 +126,7 @@ namespace Twitch.PubSub
             };
 
             Func<PubSubMessage, bool> predicate = x => x.Type == PubSubMessage.MessageType.RESPONSE && x.Nonce == message.Nonce;
-            var responseTask = PubSubMessageReceived.GetResponseAsync(predicate, ResponseTimeout, cancellationToken);
+            var responseTask = GetResponseAsync(predicate, ResponseTimeout, cancellationToken);
 
             await SendAsync(message, cancellationToken).ConfigureAwait(false);
             var response = await responseTask.ConfigureAwait(false);
@@ -255,6 +255,35 @@ namespace Twitch.PubSub
             }
         }
 
+        private async ValueTask<PubSubMessage> GetResponseAsync(Func<PubSubMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
+        {
+            var source = new TaskCompletionSource<PubSubMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var sourceTask = source.Task;
+            Task winnerTask;
+            PubSubMessageReceived += Handler;
+            try
+            {
+                winnerTask = await Task.WhenAny(Task.Delay(timeout, cancellationToken), sourceTask).ConfigureAwait(false);
+            }
+            finally
+            {
+                PubSubMessageReceived -= Handler;
+            }
+
+            if (winnerTask == sourceTask)
+                return await sourceTask.ConfigureAwait(false);
+
+            throw new TimeoutException($"Response not received within {timeout}.");
+
+            ValueTask Handler(PubSubMessage message)
+            {
+                if (predicate(message))
+                    source.TrySetResult(message);
+
+                return ValueTask.CompletedTask;
+            }
+        }
+
         private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
         {
 #if DEBUG
@@ -273,7 +302,7 @@ namespace Twitch.PubSub
                 CancellationToken cancellationToken = default;
 
                 Func<PubSubMessage, bool> predicate = x => x is { Type: PubSubMessage.MessageType.PONG };
-                var responseTask = PubSubMessageReceived.GetResponseAsync(predicate, PongTimeout, cancellationToken);
+                var responseTask = GetResponseAsync(predicate, PongTimeout, cancellationToken);
 
                 await SendAsync(request, cancellationToken).ConfigureAwait(false);
 
