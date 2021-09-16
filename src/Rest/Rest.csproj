@@ -2,7 +2,7 @@
   <Import Project="../../Tw.Net.targets" />
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-    <PackageId>Tw.Net.Rest</PackageId>
+    <PackageId>Teraa.Tw.Net.Rest</PackageId>
     <AssemblyName>Tw.Net.Rest</AssemblyName>
     <RootNamespace>Twitch.Rest</RootNamespace>
     <Nullable>enable</Nullable>
