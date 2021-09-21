@@ -54,11 +54,12 @@ namespace Twitch.Irc
 
         public async ValueTask SendAsync(IrcMessage message, CancellationToken cancellationToken = default)
         {
-            // TODO: Deserialize IrcMessage to bytes
-            // TODO: Reuse a buffer for sending
+            string rawMessage = message.ToString();
+            int length = Encoding.GetByteCount(rawMessage);
 
-            var rawMessage = message.ToString();
-            var bytes = Encoding.GetBytes(rawMessage);
+            using IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent(length);
+            Memory<byte> memory = memoryOwner.Memory.Slice(0, length);
+            Encoding.GetBytes(rawMessage, memory.Span);
 
             var limiter = message.Command switch
             {
@@ -69,11 +70,11 @@ namespace Twitch.Irc
 
             if (limiter is null)
             {
-                await _socket.SendAsync(bytes, cancellationToken).ConfigureAwait(false);
+                await _socket.SendAsync(memory, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                await limiter.Perform(() => _socket.SendAsync(bytes, cancellationToken), cancellationToken).ConfigureAwait(false);
+                await limiter.Perform(() => _socket.SendAsync(memory, cancellationToken), cancellationToken).ConfigureAwait(false);
             }
 
             await InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
