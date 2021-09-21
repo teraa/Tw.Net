@@ -85,6 +85,8 @@ namespace Twitch.Clients
                     _stream = sslStream;
                 }
 
+                _state = State.Open;
+
                 _pipeReader = PipeReader.Create(_stream);
                 _readTask = ReadPipeAsync(_pipeReader);
             }
