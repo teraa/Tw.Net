@@ -143,6 +143,7 @@ namespace Twitch.Clients
 
         public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
+            // TODO
             if (_state != State.Open)
                 throw new InvalidOperationException($"Cannot send while not open. Current state: {_state}");
 
@@ -209,7 +210,7 @@ namespace Twitch.Clients
 
                     try
                     {
-                        while (TryReadMessage(ref buffer, out ReadOnlySequence<byte> message))
+                        while (ReadOnlySequenceExtensions.TryReadMessage(ref buffer, out ReadOnlySequence<byte> message, MessageDelimiter))
                         {
                             var evt = Received;
                             if (evt is not null)
@@ -243,25 +244,6 @@ namespace Twitch.Clients
 
                 _logger.LogDebug("Read task completed.");
             }
-        }
-
-        private bool TryReadMessage(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> message)
-        {
-            SequencePosition? currentEndPos = buffer.PositionOf(MessageDelimiter);
-
-            if (!currentEndPos.HasValue)
-            {
-                message = default;
-                return false;
-            }
-
-            message = buffer.Slice(0, currentEndPos.Value);
-
-            // Skip the message + delimiter
-            SequencePosition nextStartPos = buffer.GetPosition(MessageDelimiter.Length, currentEndPos.Value);
-            buffer = buffer.Slice(nextStartPos);
-
-            return true;
         }
 
         public void Dispose()

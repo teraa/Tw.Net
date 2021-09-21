@@ -43,5 +43,24 @@ namespace Twitch
                 if (success) return firstPos;
             }
         }
+
+        public static bool TryReadMessage(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> message, Span<byte> delimiter)
+        {
+            SequencePosition? currentEndPos = buffer.PositionOf(delimiter);
+
+            if (!currentEndPos.HasValue)
+            {
+                message = default;
+                return false;
+            }
+
+            message = buffer.Slice(0, currentEndPos.Value);
+
+            // Skip the message + delimiter
+            SequencePosition nextStartPos = buffer.GetPosition(delimiter.Length, currentEndPos.Value);
+            buffer = buffer.Slice(nextStartPos);
+
+            return true;
+        }
     }
 }
