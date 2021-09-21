@@ -10,8 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Twitch.Clients
 {
-    // TODO: unfinished
-    public class TcpSocketClient : ISocketClient
+    // TODO: finish, public
+    internal class TcpSocketClient : ISocketClient
     {
         private readonly ILogger<TcpSocketClient> _logger;
         private readonly TcpClient _tcpClient;
@@ -29,7 +29,10 @@ namespace Twitch.Clients
         }
 
         public event Func<ReadOnlySequence<byte>, ValueTask>? Received;
+
+#pragma warning disable CS0067 // The event is never used
         public event Func<Exception?, ValueTask>? ClosedUnexpectedly;
+#pragma warning restore CS0067
 
         public string Host { get; set; }
         public int Port { get; set; }
