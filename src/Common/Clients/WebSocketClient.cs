@@ -39,6 +39,7 @@ namespace Twitch.Clients
         }
 
         public Uri Uri { get; set; }
+        public byte[] MessageDelimiter { get; set; } = new byte[] { (byte)'\r', (byte)'\n' };
 
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
@@ -238,10 +239,9 @@ namespace Twitch.Clients
             }
         }
 
-        private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+        private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
         {
-            // Every message ends with "\r\n"
-            SequencePosition? currentEndPos = buffer.PositionOf((byte)'\r');
+            SequencePosition? currentEndPos = buffer.PositionOf(MessageDelimiter);
 
             if (!currentEndPos.HasValue)
             {
@@ -251,8 +251,8 @@ namespace Twitch.Clients
 
             line = buffer.Slice(0, currentEndPos.Value);
 
-            // Skip the line + "\r\n"
-            SequencePosition nextStartPos = buffer.GetPosition(2, currentEndPos.Value);
+            // Skip the line + delimiter
+            SequencePosition nextStartPos = buffer.GetPosition(MessageDelimiter.Length, currentEndPos.Value);
             buffer = buffer.Slice(nextStartPos);
 
             return true;
