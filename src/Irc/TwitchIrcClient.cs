@@ -57,24 +57,26 @@ namespace Twitch.Irc
             string rawMessage = message.ToString();
             int length = Encoding.GetByteCount(rawMessage);
 
-            using IMemoryOwner<byte> memoryOwner = MemoryPool<byte>.Shared.Rent(length);
-            Memory<byte> memory = memoryOwner.Memory.Slice(0, length);
-            Encoding.GetBytes(rawMessage, memory.Span);
+            using (IMemoryOwner<byte> owner = MemoryPool<byte>.Shared.Rent(length))
+            {
+                Memory<byte> memory = owner.Memory.Slice(0, length);
+                Encoding.GetBytes(rawMessage, memory.Span);
 
-            var limiter = message.Command switch
-            {
-                IrcCommand.JOIN => JoinLimiter,
-                IrcCommand.PRIVMSG => CommandLimiter,
-                _ => null,
-            };
+                var limiter = message.Command switch
+                {
+                    IrcCommand.JOIN => JoinLimiter,
+                    IrcCommand.PRIVMSG => CommandLimiter,
+                    _ => null,
+                };
 
-            if (limiter is null)
-            {
-                await _socket.SendAsync(memory, cancellationToken).ConfigureAwait(false);
-            }
-            else
-            {
-                await limiter.Perform(() => _socket.SendAsync(memory, cancellationToken), cancellationToken).ConfigureAwait(false);
+                if (limiter is null)
+                {
+                    await _socket.SendAsync(memory, cancellationToken).ConfigureAwait(false);
+                }
+                else
+                {
+                    await limiter.Perform(() => _socket.SendAsync(memory, cancellationToken), cancellationToken).ConfigureAwait(false);
+                }
             }
 
             await InvokeAsync(IrcMessageSent, nameof(IrcMessageSent), message).ConfigureAwait(false);
@@ -141,11 +143,11 @@ namespace Twitch.Irc
             switch (response.Command)
             {
                 case IrcCommand.NOTICE:
-                {
-                    var message = response.Content?.Text ?? "Login failed.";
-                    _logger.LogError(message);
-                    throw new AuthenticationException(message);
-                }
+                    {
+                        var message = response.Content?.Text ?? "Login failed.";
+                        _logger.LogError(message);
+                        throw new AuthenticationException(message);
+                    }
 
                 case IrcCommand.GLOBALUSERSTATE:
                     // TODO: Set state
