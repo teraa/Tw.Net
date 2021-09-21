@@ -7,12 +7,12 @@ namespace Twitch.Irc
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddTwitchIrcClient(this IServiceCollection serviceCollection, Action<TwitchIrcClient>? optionsAction = null)
+        public static IServiceCollection AddTwitchIrcClient(this IServiceCollection serviceCollection, Action<TwitchIrcClientOptions>? optionsAction = null)
         {
             return serviceCollection.AddSingleton<TwitchIrcClient>(serviceProvider => CreateTwitchIrcClient(serviceProvider, optionsAction));
         }
 
-        public static TwitchIrcClient CreateTwitchIrcClient(IServiceProvider serviceProvider, Action<TwitchIrcClient>? optionsAction = null)
+        public static TwitchIrcClient CreateTwitchIrcClient(IServiceProvider serviceProvider, Action<TwitchIrcClientOptions>? optionsAction = null)
         {
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 

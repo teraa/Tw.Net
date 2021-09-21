@@ -7,12 +7,12 @@ namespace Twitch.PubSub
 {
     public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddTwitchPubSubClient(this IServiceCollection serviceCollection, Action<TwitchPubSubClient>? optionsAction = null)
+        public static IServiceCollection AddTwitchPubSubClient(this IServiceCollection serviceCollection, Action<TwitchPubSubClientOptions>? optionsAction = null)
         {
             return serviceCollection.AddSingleton<TwitchPubSubClient>(serviceProvider => CreateTwitchPubSubClient(serviceProvider, optionsAction));
         }
 
-        public static TwitchPubSubClient CreateTwitchPubSubClient(IServiceProvider serviceProvider, Action<TwitchPubSubClient>? optionsAction = null)
+        public static TwitchPubSubClient CreateTwitchPubSubClient(IServiceProvider serviceProvider, Action<TwitchPubSubClientOptions>? optionsAction = null)
         {
             var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 

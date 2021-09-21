@@ -10,7 +10,7 @@ using Timer = System.Timers.Timer;
 
 namespace Twitch.PubSub
 {
-    public class TwitchPubSubClient : IDisposable
+    public class TwitchPubSubClient : TwitchPubSubClientOptions, IDisposable
     {
         private readonly ISocketClient _socket;
         private readonly ILogger<TwitchPubSubClient> _logger;

@@ -12,7 +12,7 @@ using Timer = System.Timers.Timer;
 
 namespace Twitch.Irc
 {
-    public class TwitchIrcClient : IDisposable
+    public class TwitchIrcClient : TwitchIrcClientOptions, IDisposable
     {
         private readonly ISocketClient _socket;
         private readonly ILogger<TwitchIrcClient> _logger;
