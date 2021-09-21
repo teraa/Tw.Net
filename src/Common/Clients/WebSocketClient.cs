@@ -17,11 +17,12 @@ namespace Twitch.Clients
         private CancellationTokenSource? _stoppingToken;
         private Task? _fillTask, _readTask;
         private State _state;
+        private Uri _uri;
 
         public WebSocketClient(Uri uri, ILogger<WebSocketClient> logger)
         {
-            Uri = uri;
-            _logger = logger;
+            _uri = uri ?? throw new ArgumentNullException(nameof(uri));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _pipe = new Pipe();
             _connectSem = new SemaphoreSlim(1, 1);
             _state = State.None;
@@ -38,7 +39,12 @@ namespace Twitch.Clients
             Closed,
         }
 
-        public Uri Uri { get; set; }
+        public Uri Uri
+        {
+            get => _uri;
+            set => _uri = value ?? throw new ArgumentNullException(nameof(Uri));
+        }
+
         public byte[] MessageDelimiter { get; set; } = new byte[] { (byte)'\r', (byte)'\n' };
 
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
