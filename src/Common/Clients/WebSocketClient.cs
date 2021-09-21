@@ -203,14 +203,14 @@ namespace Twitch.Clients
 
                     try
                     {
-                        while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
+                        while (TryReadMessage(ref buffer, out ReadOnlySequence<byte> message))
                         {
                             var evt = Received;
                             if (evt is not null)
                             {
                                 try
                                 {
-                                    await evt.Invoke(line).ConfigureAwait(false);
+                                    await evt.Invoke(message).ConfigureAwait(false);
                                 }
                                 catch (Exception ex)
                                 {
@@ -239,19 +239,19 @@ namespace Twitch.Clients
             }
         }
 
-        private bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
+        private bool TryReadMessage(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> message)
         {
             SequencePosition? currentEndPos = buffer.PositionOf(MessageDelimiter);
 
             if (!currentEndPos.HasValue)
             {
-                line = default;
+                message = default;
                 return false;
             }
 
-            line = buffer.Slice(0, currentEndPos.Value);
+            message = buffer.Slice(0, currentEndPos.Value);
 
-            // Skip the line + delimiter
+            // Skip the message + delimiter
             SequencePosition nextStartPos = buffer.GetPosition(MessageDelimiter.Length, currentEndPos.Value);
             buffer = buffer.Slice(nextStartPos);
 
