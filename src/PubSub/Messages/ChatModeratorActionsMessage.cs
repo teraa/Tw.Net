@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -51,6 +52,26 @@ namespace Twitch.PubSub.Messages
 
             [JsonPropertyName("moderator_message")]
             public string? ModeratorMessage { get; init; }
+
+            #region channel_terms_action
+            [JsonPropertyName("id")]
+            public string? Id { get; init; }
+
+            [JsonPropertyName("text")]
+            public string? Text { get; init; }
+
+            [JsonPropertyName("requester_id")]
+            public string? RequesterId { get; init; }
+
+            [JsonPropertyName("requester_login")]
+            public string? RequesterLogin { get; init; }
+
+            [JsonPropertyName("expires_at")]
+            public DateTimeOffset? ExpiresAt { get; init; }
+
+            [JsonPropertyName("updated_at")]
+            public DateTimeOffset? UpdatedAt { get; init; }
+            #endregion
         }
     }
 }

@@ -16,19 +16,20 @@ namespace Twitch.PubSub
         public bool IsFromAutomod { get; private init; }
         public string? ModeratorMessage { get; private init; }
 
+        // TODO: help me
         internal static ModeratorAction Create(Topic topic, ChatModeratorActionsMessage message)
         {
             var channelId = topic.Args[1];
             var data = message.Data ?? throw new ArgumentNullException(nameof(message.Data));
 
             User? moderator = null;
-            var moderatorId = data.CreatedByUserId ?? data.CreatedById;
+            var moderatorId = data.CreatedByUserId ?? data.CreatedById ?? data.RequesterId;
             if (moderatorId is { Length: > 0 })
             {
                 moderator = new User
                 {
                     Id = moderatorId,
-                    Login = data.CreatedBy ?? data.CreatedByLogin
+                    Login = data.CreatedBy ?? data.CreatedByLogin ?? data.RequesterLogin
                         ?? throw new ArgumentNullException(nameof(data.CreatedBy))
                 };
             }
@@ -50,13 +51,24 @@ namespace Twitch.PubSub
                 };
             }
 
-            var type = data.Type ?? message.Type
-                ?? throw new ArgumentNullException(nameof(data.Type));
+            string type, action;
 
-            var action = data.ModerationAction
-                ?? throw new ArgumentNullException(nameof(data.ModerationAction));
+            if (data.ModerationAction is null)
+            {
+                type = message.Type ?? throw new ArgumentNullException(nameof(message.Type));
+                action = data.Type ?? message.Type ?? throw new ArgumentNullException(nameof(data.ModerationAction));
+            }
+            else
+            {
+                type = data.Type ?? message.Type ?? throw new ArgumentNullException(nameof(data.Type));
+                action = data.ModerationAction;
+            }
 
-            var args = data.Args;
+            IReadOnlyList<string>? args;
+            if (string.Equals(message.Type, "channel_terms_action", StringComparison.Ordinal) && data.Text is not null)
+                args = new string[] { data.Text };
+            else
+                args = data.Args;
 
             string? messageId;
             if (string.Equals(action, "delete", StringComparison.Ordinal))
