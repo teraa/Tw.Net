@@ -44,7 +44,7 @@ namespace Twitch
             }
         }
 
-        public static bool TryReadMessage(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> message, Span<byte> delimiter)
+        public static bool TryReadMessage(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> message, ReadOnlySpan<byte> delimiter)
         {
             SequencePosition? currentEndPos = buffer.PositionOf(delimiter);
 
