@@ -143,11 +143,23 @@ namespace Twitch.Clients
 
         public async ValueTask SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            // TODO
-            if (_state != State.Open)
-                throw new InvalidOperationException($"Cannot send while not open. Current state: {_state}");
+            ClientWebSocket ws;
 
-            await _ws!.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken).ConfigureAwait(false);
+            // Ensure we don't get a nullref
+            await _connectSem.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (_state != State.Open)
+                    throw new InvalidOperationException($"Cannot send while not open. Current state: {_state}");
+
+                ws = _ws!;
+            }
+            finally
+            {
+                _connectSem.Release();
+            }
+
+            await ws.SendAsync(buffer, WebSocketMessageType.Text, true, cancellationToken).ConfigureAwait(false);
         }
 
         private async Task FillPipeAsync(ClientWebSocket ws, PipeWriter writer, CancellationToken cancellationToken)
