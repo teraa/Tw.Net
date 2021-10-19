@@ -25,7 +25,8 @@ namespace Twitch.PubSub
             LISTEN,
             UNLISTEN,
             RESPONSE,
-            MESSAGE
+            MESSAGE,
+            RECONNECT
         }
 
         public class MessageData
