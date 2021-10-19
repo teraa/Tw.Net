@@ -198,6 +198,8 @@ namespace Twitch.PubSub
         {
             try
             {
+                // TODO: Handle RECONNECT type
+
                 if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
                     return;
 
