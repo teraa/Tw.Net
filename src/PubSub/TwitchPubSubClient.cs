@@ -159,6 +159,8 @@ namespace Twitch.PubSub
                 return;
             }
 
+            _logger.LogDebug($"Received {message.Type}.");
+
             await InvokeAsync(PubSubMessageReceived, nameof(PubSubMessageReceived), message).ConfigureAwait(false);
         }
 
