@@ -200,24 +200,33 @@ namespace Twitch.PubSub
         {
             try
             {
-                // TODO: Handle RECONNECT type
-
-                if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
-                    return;
-
-                var data = pubSubMessage.Data!;
-                var topic = data.Topic!;
-                var messageJson = data.Message!;
-                var model = PubSubParser.ParseMessage(topic, messageJson);
-
-                switch (model)
+                switch (pubSubMessage.Type)
                 {
-                    case ModeratorAction m:
-                        await InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, m).ConfigureAwait(false);
+                    case PubSubMessage.MessageType.MESSAGE:
+                        {
+                            if (pubSubMessage.Type != PubSubMessage.MessageType.MESSAGE)
+                                return;
+
+                            var data = pubSubMessage.Data!;
+                            var topic = data.Topic!;
+                            var messageJson = data.Message!;
+                            var model = PubSubParser.ParseMessage(topic, messageJson);
+
+                            switch (model)
+                            {
+                                case ModeratorAction m:
+                                    await InvokeAsync(ModeratorActionReceived, nameof(ModeratorActionReceived), topic, m).ConfigureAwait(false);
+                                    break;
+                                default:
+                                    _logger.LogWarning($"Unhandled message: {PubSubParser.ToJson(pubSubMessage)}");
+                                    break;
+                            }
+                        }
                         break;
-                    default:
-                        _logger.LogWarning($"Unhandled message: {PubSubParser.ToJson(pubSubMessage)}");
-                        break;
+
+                    case PubSubMessage.MessageType.RECONNECT:
+                        // TODO
+                    break;
                 }
             }
             catch (Exception ex)
