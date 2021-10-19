@@ -148,7 +148,16 @@ namespace Twitch.PubSub
 
             // TODO: optimize
             var text = Encoding.GetString(buffer);
-            var message = PubSubParser.Parse<PubSubMessage>(text);
+            PubSubMessage message;
+            try
+            {
+                message = PubSubParser.Parse<PubSubMessage>(text);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Exception parsing PubSub message: {text}");
+                return;
+            }
 
             await InvokeAsync(PubSubMessageReceived, nameof(PubSubMessageReceived), message).ConfigureAwait(false);
         }
