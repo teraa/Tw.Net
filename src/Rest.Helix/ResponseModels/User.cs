@@ -32,9 +32,6 @@ namespace Twitch.Rest.Helix
         [JsonPropertyName("offline_image_url")]
         public string OfflineImageUrl { get; init; } = null!;
 
-        [JsonPropertyName("view_count")]
-        public long ViewCount { get; init; }
-
         [JsonPropertyName("created_at")]
         public DateTimeOffset CreatedAt { get; init; }
     }
