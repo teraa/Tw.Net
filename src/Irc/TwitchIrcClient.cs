@@ -169,12 +169,12 @@ namespace Twitch.Irc
             // TODO: Token
             CancellationToken cancellationToken = default;
 
-            int delay = 0;
+            int delaySeconds = 0;
             while (true)
             {
                 try
                 {
-                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                    await Task.Delay(delaySeconds * 1000, cancellationToken).ConfigureAwait(false);
                     await ConnectAsync(cancellationToken).ConfigureAwait(false);
                     break;
                 }
@@ -184,11 +184,11 @@ namespace Twitch.Irc
                 }
                 catch (Exception ex)
                 {
-                    delay = delay switch
+                    delaySeconds = delaySeconds switch
                     {
                         0 => 1,
-                        <= 64 => delay * 2,
-                        _ => delay,
+                        <= 64 => delaySeconds * 2,
+                        _ => delaySeconds,
                     };
 
                     _logger.LogError(ex, $"Exception while reconnecting.");
