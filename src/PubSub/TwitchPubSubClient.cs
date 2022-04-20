@@ -309,10 +309,10 @@ namespace Twitch.PubSub
             }
         }
 
-        private async void PingTimerElapsed(object sender, ElapsedEventArgs e)
+        private async void PingTimerElapsed(object? sender, ElapsedEventArgs e)
         {
 #if DEBUG
-            ((Timer)sender).Enabled = false;
+            ((Timer)sender!).Enabled = false;
 #endif
             try
             {

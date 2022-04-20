@@ -30,7 +30,7 @@ namespace Twitch
         public int Limit { get; }
         public TimeSpan Interval { get; }
 
-        private void Refill(object sender, ElapsedEventArgs e)
+        private void Refill(object? sender, ElapsedEventArgs e)
         {
             _sem.Release(Interlocked.Exchange(ref _done, 0));
         }
