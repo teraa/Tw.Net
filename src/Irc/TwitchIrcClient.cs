@@ -1,4 +1,3 @@
-using IrcMessageParser;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Buffers;
@@ -7,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Teraa.Irc;
 using Twitch.Clients;
 using Timer = System.Timers.Timer;
 
@@ -38,8 +38,8 @@ namespace Twitch.Irc
         // TODO: cancel token arg?
         public event Func<ValueTask>? Connected;
         public event Func<ValueTask>? Disconnected;
-        public event Func<IrcMessage, ValueTask>? IrcMessageSent;
-        public event Func<IrcMessage, ValueTask>? IrcMessageReceived;
+        public event Func<Message, ValueTask>? IrcMessageSent;
+        public event Func<Message, ValueTask>? IrcMessageReceived;
         #endregion
 
         #region props
@@ -52,7 +52,7 @@ namespace Twitch.Irc
         public IRateLimiter CommandLimiter { get; set; } = new SlidingWindowRateLimiter(20, TimeSpan.FromSeconds(30));
         #endregion
 
-        public async ValueTask SendAsync(IrcMessage message, CancellationToken cancellationToken = default)
+        public async ValueTask SendAsync(Message message, CancellationToken cancellationToken = default)
         {
             string rawMessage = message.ToString();
             int length = Encoding.GetByteCount(rawMessage);
@@ -64,8 +64,8 @@ namespace Twitch.Irc
 
                 var limiter = message.Command switch
                 {
-                    IrcCommand.JOIN => JoinLimiter,
-                    IrcCommand.PRIVMSG => CommandLimiter,
+                    Command.JOIN => JoinLimiter,
+                    Command.PRIVMSG => CommandLimiter,
                     _ => null,
                 };
 
@@ -121,12 +121,12 @@ namespace Twitch.Irc
             if (login is null) throw new ArgumentNullException(nameof(login));
             if (token is null) throw new ArgumentNullException(nameof(token));
 
-            Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.GLOBALUSERSTATE or IrcCommand.NOTICE };
+            Func<Message, bool> predicate = x => x is { Command: Command.GLOBALUSERSTATE or Command.NOTICE };
             var responseTask = GetResponseAsync(predicate, LoginTimeout, cancellationToken);
 
             await SendLoginAsync(nick: login, pass: "oauth:" + token, cancellationToken).ConfigureAwait(false);
 
-            IrcMessage response;
+            Message response;
             try
             {
                 response = await responseTask.ConfigureAwait(false);
@@ -142,14 +142,14 @@ namespace Twitch.Irc
             // TODO: Close when throw?
             switch (response.Command)
             {
-                case IrcCommand.NOTICE:
+                case Command.NOTICE:
                     {
                         var message = response.Content?.Text ?? "Login failed.";
                         _logger.LogError(message);
                         throw new AuthenticationException(message);
                     }
 
-                case IrcCommand.GLOBALUSERSTATE:
+                case Command.GLOBALUSERSTATE:
                     // TODO: Set state
                     break;
             }
@@ -159,7 +159,7 @@ namespace Twitch.Irc
         {
             // TODO: optimize
             var text = Encoding.GetString(buffer);
-            var message = IrcMessage.Parse(text);
+            var message = Message.Parse(text);
 
             await InvokeAsync(IrcMessageReceived, nameof(IrcMessageReceived), message).ConfigureAwait(false);
         }
@@ -228,9 +228,9 @@ namespace Twitch.Irc
 
         private async Task SendCapabilitiesAsync(CancellationToken cancellationToken)
         {
-            var message = new IrcMessage
+            var message = new Message
             {
-                Command = IrcCommand.CAP,
+                Command = Command.CAP,
                 Arg = "REQ",
                 Content = new(string.Join(' ', Capabilities)),
             };
@@ -240,15 +240,15 @@ namespace Twitch.Irc
 
         private async Task SendLoginAsync(string nick, string pass, CancellationToken cancellationToken)
         {
-            var passMsg = new IrcMessage
+            var passMsg = new Message
             {
-                Command = IrcCommand.PASS,
+                Command = Command.PASS,
                 Content = new(pass),
             };
 
-            var nickMsg = new IrcMessage
+            var nickMsg = new Message
             {
-                Command = IrcCommand.NICK,
+                Command = Command.NICK,
                 Content = new(nick),
             };
 
@@ -256,9 +256,9 @@ namespace Twitch.Irc
             await SendAsync(nickMsg, cancellationToken).ConfigureAwait(false);
         }
 
-        private async ValueTask<IrcMessage> GetResponseAsync(Func<IrcMessage, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
+        private async ValueTask<Message> GetResponseAsync(Func<Message, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            var source = new TaskCompletionSource<IrcMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var source = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             var sourceTask = source.Task;
             Task winnerTask;
             IrcMessageReceived += Handler;
@@ -276,7 +276,7 @@ namespace Twitch.Irc
 
             throw new TimeoutException($"Response not received within {timeout}.");
 
-            ValueTask Handler(IrcMessage message)
+            ValueTask Handler(Message message)
             {
                 if (predicate(message))
                     source.TrySetResult(message);
@@ -293,9 +293,9 @@ namespace Twitch.Irc
             try
             {
                 var ts = DateTimeOffset.UtcNow.ToString("u");
-                var request = new IrcMessage
+                var request = new Message
                 {
-                    Command = IrcCommand.PING,
+                    Command = Command.PING,
                     Content = new(ts),
                 };
 
@@ -304,7 +304,7 @@ namespace Twitch.Irc
                 //     return;
                 CancellationToken cancellationToken = default;
 
-                Func<IrcMessage, bool> predicate = x => x is { Command: IrcCommand.PONG, Content: { } content } && content == request.Content;
+                Func<Message, bool> predicate = x => x is { Command: Command.PONG, Content: { } content } && content == request.Content;
                 var responseTask = GetResponseAsync(predicate, PongTimeout, cancellationToken);
 
                 await SendAsync(request, cancellationToken).ConfigureAwait(false);
