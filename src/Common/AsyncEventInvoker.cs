@@ -32,6 +32,7 @@ namespace Twitch
                 var ev = eventDelegate;
                 if (ev is not null)
                 {
+                    // https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md#using-a-timeout
                     var warnTask = Task.Delay(_warnTimeout);
                     var evTask = ev.InvokeAsync(parameters);
                     var task = await Task.WhenAny(warnTask, evTask).ConfigureAwait(false);
