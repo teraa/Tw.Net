@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="../../Tw.Net.targets" />
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <PackageId>Teraa.Tw.Net.Common</PackageId>
     <AssemblyName>Tw.Net.Common</AssemblyName>
     <RootNamespace>Twitch</RootNamespace>
